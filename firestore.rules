@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Prevent changing immutable values upon creation
+      allow create: if isOwner(userId) && 
+        request.resource.data.role == 'user' && 
+        request.resource.data.provider == 'google';
+        
+      // Ensure users cannot self-escalate role, provider, or change createdAt
+      allow update: if isOwner(userId) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.provider == resource.data.provider &&
+        request.resource.data.createdAt == resource.data.createdAt;
+        
+      allow delete: if false; // Users cannot delete profiles
+    }
+
+    // quests Collection
+    match /quests/{questId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Ensure quests created belong to the authenticated user
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Ensure quests updated belong to the authenticated user
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      allow delete: if false; // Quests should be archived instead of deleted
+    }
+
+    // dailyMissions Collection
+    match /dailyMissions/{missionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Check deterministic layout (must contain user id)
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        missionId == request.resource.data.questId + '_' + request.auth.uid + '_' + request.resource.data.date;
+        
+      allow update, delete: if false; // Daily Missions are immutable once finalized
+    }
+  }
+}

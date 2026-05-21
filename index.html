@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitQuest — Gamified Adaptive Quest Board</title>
+    <!-- Google Fonts: Space Grotesk & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-default">
+
+    <!-- Global Layout Toast System -->
+    <div id="toast" class="toast hidden">
+        <span class="toast-icon">✨</span>
+        <span id="toastText">Mission accomplished!</span>
+    </div>
+
+    <!-- 1. Firebase Config Hard Error Screen -->
+    <section id="configErrorView" class="view hidden">
+        <div class="card neo-card center-card max-width-md error-card">
+            <h1 class="text-danger">⚠️ Configuration Error</h1>
+            <p><strong>HabitQuest</strong> is running on a production domain, but Firebase is not configured properly in <code>js/firebase-config.js</code>.</p>
+            <p class="secondary-text">Fallback Mock Mode is restricted to local development (localhost / 127.0.0.1) for database security.</p>
+            <p class="instruction-text">Please paste your valid Firebase SDK configurations to begin using the real database.</p>
+        </div>
+    </section>
+
+    <!-- 2. Auth View -->
+    <section id="authView" class="view">
+        <div class="auth-container">
+            <div class="logo-area">
+                <span class="logo-emoji">⚔️</span>
+                <h1 class="logo-title">HabitQuest</h1>
+                <p class="logo-tagline">Turn daily routines into structured quests. Level up your discipline.</p>
+            </div>
+
+            <div class="grid-2col">
+                <!-- User Sign In Card -->
+                <div class="card neo-card">
+                    <h2 class="section-title">Adventurer Login</h2>
+                    <p class="card-desc">Embark on your personal growth quest board, track Streaks, and earn Gold.</p>
+                    <button id="googleLoginBtn" class="btn btn-primary full-width font-bold">
+                        <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1 6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.985 0-.74-.078-1.302-.176-1.86H12.24z"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <p class="mode-notice text-center" id="authModeNotice"></p>
+                </div>
+
+                <!-- Admin Sign In Card -->
+                <div class="card neo-card">
+                    <h2 class="section-title">Guild Master Panel Login</h2>
+                    <p class="card-desc">For system administrators to monitor aggregates, consistency, and metrics.</p>
+                    <form id="adminLoginForm">
+                        <div class="form-group">
+                            <label for="adminEmail" class="font-bold">Guild Master Email</label>
+                            <input type="email" id="adminEmail" placeholder="admin@habitquest.com" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminPassword" class="font-bold">Password</label>
+                            <input type="password" id="adminPassword" placeholder="••••••••" required class="form-control">
+                        </div>
+                        <button type="submit" id="adminLoginBtn" class="btn btn-dark full-width font-bold">
+                            Login as Guild Master
+                        </button>
+                    </form>
+                    <p id="adminErrorMsg" class="text-danger font-bold text-center mt-sm hidden"></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. User Dashboard View -->
+    <section id="dashboardView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">⚔️</span>
+                <span class="logo-text">HabitQuest</span>
+            </div>
+            <nav class="header-nav">
+                <button id="navDashboard" class="nav-link active">Quest Board</button>
+                <button id="navShop" class="nav-link">Quest Shop</button>
+                <button id="navBag" class="nav-link">My Bag</button>
+                <button id="navLogout" class="btn btn-sm btn-outline font-bold">Logout</button>
+            </nav>
+        </header>
+
+        <div class="app-container">
+            <!-- Profile Stat Bar -->
+            <div class="card neo-card profile-bar">
+                <div class="profile-details">
+                    <div class="avatar-badge">🛡️</div>
+                    <div>
+                        <h2 id="profileName" class="user-display-name">Loading Adventurer...</h2>
+                        <span id="profileTitle" class="badge badge-primary title-badge">Rookie Adventurer</span>
+                    </div>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <span class="stat-label">Level</span>
+                        <span id="profileLevel" class="stat-value text-primary">1</span>
+                    </div>
+                    <div class="stat-box xp-box">
+                        <span class="stat-label">XP Progress</span>
+                        <div class="progress-container profile-xp-bar">
+                            <div id="profileXpFill" class="progress-fill fill-primary" style="width: 0%;"></div>
+                        </div>
+                        <span id="profileXpText" class="stat-mini-desc">0 / 100 XP</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Gold</span>
+                        <span id="profileGold" class="stat-value text-gold">🪙 0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Streak Shield</span>
+                        <span id="profileShields" class="stat-value text-info">🛡️ 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid: Active Quests on Left, Quest Summary Stats on Right -->
+            <div class="dashboard-grid">
+                <!-- Left: Quests Board -->
+                <div class="quests-board-section">
+                    <div class="board-header">
+                        <h3 class="board-title">Active Quests</h3>
+                        <button id="btnOpenCreateQuest" class="btn btn-primary btn-icon font-bold">
+                            ➕ Create New Quest
+                        </button>
+                    </div>
+
+                    <!-- Quests Container -->
+                    <div id="activeQuestsContainer" class="quests-list">
+                        <!-- Active quest cards will be dynamically loaded here -->
+                        <div class="card neo-card empty-state text-center">
+                            <span class="empty-emoji">📜</span>
+                            <h4>Your Quest Board is empty!</h4>
+                            <p>Create a Quest based on a habit you want to build to start earning XP and Gold.</p>
+                        </div>
+                    </div>
+
+                    <!-- Completed / Archived Quests Drawer -->
+                    <div class="drawer-section mt-lg">
+                        <button id="btnToggleArchive" class="btn btn-outline full-width font-bold text-left justify-between">
+                            <span>📜 View Completed & Archived Quests</span>
+                            <span id="archiveToggleIcon">▼</span>
+                        </button>
+                        
+                        <div id="archiveQuestsContainer" class="quests-list mt-md hidden">
+                            <!-- Completed and archived cards render here -->
+                            <p class="secondary-text text-center italic">No completed or archived quests found.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Strategy Guide & Fast Metrics -->
+                <div class="side-panel">
+                    <div class="card neo-card side-card bg-gold-tint">
+                        <h4 class="card-side-title">⚔️ Guild Rules</h4>
+                        <ul class="rule-list">
+                            <li><strong>Daily Missions:</strong> Refresh daily. Do your quests to earn rewards and keep your Chain alive.</li>
+                            <li><strong>Quest Health:</strong> Consistency determines health. Health drops if you miss missions!</li>
+                            <li><strong>Streak Shield:</strong> Protects your Chain if you miss a mission. Purchase one in the Quest Shop!</li>
+                        </ul>
+                    </div>
+
+                    <div class="card neo-card side-card">
+                        <h4 class="card-side-title">🏆 Hall of Achievements</h4>
+                        <div class="achievement-metric mt-sm">
+                            <span class="metric-label">Best Chain Record:</span>
+                            <span id="bestChainOverall" class="metric-value text-primary font-bold">0 Days</span>
+                        </div>
+                        <div class="achievement-metric mt-sm">
+                            <span class="metric-label">Total Successful Days:</span>
+                            <span id="totalSuccessfulDays" class="metric-value text-success font-bold">0 Days</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Create Quest View -->
+    <section id="createQuestView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">⚔️</span>
+                <span class="logo-text">HabitQuest</span>
+            </div>
+            <button id="btnBackToDashboardFromCreate" class="btn btn-sm btn-outline font-bold">⬅ Back to Board</button>
+        </header>
+
+        <div class="app-container max-width-md">
+            <div class="card neo-card form-container">
+                <h2 class="form-title">📜 Post a New Quest</h2>
+                <p class="form-subtitle">Structure your daily habits as adaptive missions. Difficulty and rewards are computed automatically.</p>
+
+                <form id="createQuestForm">
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="questTitle" class="font-bold">Quest Name / Habit Title</label>
+                        <input type="text" id="questTitle" placeholder="e.g., Learn JavaScript, Gym Workout, Read Book" required class="form-control">
+                        <span class="form-help">Make it clear and actionable.</span>
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="form-group">
+                        <label for="questReason" class="font-bold">Your Purpose / Motivation</label>
+                        <input type="text" id="questReason" placeholder="e.g., To land a junior developer job, to get fit" required class="form-control">
+                        <span class="form-help">Why is this quest important to you? Remind yourself of the stakes.</span>
+                    </div>
+
+                    <!-- Category & Type Row -->
+                    <div class="grid-2col gap-md">
+                        <div class="form-group">
+                            <label for="questCategory" class="font-bold">Quest Category</label>
+                            <select id="questCategory" class="form-control">
+                                <option value="Study">📚 Study / Learning</option>
+                                <option value="Fitness">💪 Fitness / Sports</option>
+                                <option value="Health">🍏 Health / Nutrition</option>
+                                <option value="Work">💼 Work / Career</option>
+                                <option value="Mind">🧘 Mind / Meditation</option>
+                                <option value="Habit">🌱 General Habit</option>
+                                <option value="Other">✨ Other Quest</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="questType" class="font-bold">Quest Type</label>
+                            <select id="questType" class="form-control">
+                                <option value="simple">⚡ Simple Quest (Once Daily)</option>
+                                <option value="focus">⏱ Focus Quest (Duration / Timer)</option>
+                                <option value="multi">📋 Multi Mission Quest (Checklist)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Challenge Days & Frequency Row -->
+                    <div class="grid-2col gap-md">
+                        <div class="form-group">
+                            <label for="challengeDays" class="font-bold">Quest Challenge Duration</label>
+                            <select id="challengeDays" class="form-control">
+                                <option value="7">7 Days Challenge (Skirmish)</option>
+                                <option value="14" selected>14 Days Challenge (Raid)</option>
+                                <option value="21">21 Days Challenge (Expedition)</option>
+                                <option value="30">30 Days Challenge (Epic Campaign)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="frequencyPerWeek" class="font-bold">Frequency Per Week</label>
+                            <select id="frequencyPerWeek" class="form-control">
+                                <option value="7" selected>Everyday (7x / week)</option>
+                                <option value="5">Weekday Raid (5x / week)</option>
+                                <option value="3">Light Training (3x / week)</option>
+                                <option value="2">Weekend Only (2x / week)</option>
+                                <option value="1">Weekly Event (1x / week)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Fields for Focus Quest -->
+                    <div id="focusQuestFields" class="form-extra-section hidden">
+                        <h4 class="section-divider font-bold">⏱ Timer Threshold Configuration (Minutes)</h4>
+                        <p class="secondary-text">Configure stopwatch thresholds to trigger reward scaling.</p>
+                        <div class="grid-3col gap-sm">
+                            <div class="form-group">
+                                <label for="minMinutes">Minimum Clear</label>
+                                <input type="number" id="minMinutes" value="10" min="1" max="300" class="form-control">
+                                <span class="mini-desc">Base threshold (0.5x rewards)</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="normalMinutes">Normal Clear</label>
+                                <input type="number" id="normalMinutes" value="30" min="1" max="300" class="form-control">
+                                <span class="mini-desc">Target threshold (1x rewards)</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="perfectMinutes">Perfect Clear</label>
+                                <input type="number" id="perfectMinutes" value="60" min="1" max="300" class="form-control">
+                                <span class="mini-desc">Epic threshold (1.5x rewards)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Fields for Multi Mission Quest -->
+                    <div id="multiMissionFields" class="form-extra-section hidden">
+                        <h4 class="section-divider font-bold">📋 Daily Sub-Target Checklists</h4>
+                        <p class="secondary-text">Define sub-targets that must be checked daily (e.g., Morning Meds, Night Meds).</p>
+                        <div id="multiTargetsContainer" class="multi-targets-list">
+                            <!-- Dynamic target inputs will generate here -->
+                        </div>
+                        <button type="button" id="btnAddMultiTarget" class="btn btn-sm btn-outline mt-sm font-bold">➕ Add Sub-Target</button>
+                    </div>
+
+                    <!-- Realtime Difficulty Assessment Card -->
+                    <div class="card neo-card difficulty-preview-card mt-lg">
+                        <h4 class="preview-title">⚖️ Automated Difficulty Assessment</h4>
+                        <div class="preview-metrics">
+                            <div class="metric-block">
+                                <span class="metric-label">Difficulty Score</span>
+                                <span id="diffScoreDisplay" class="metric-value">6</span>
+                            </div>
+                            <div class="metric-block">
+                                <span class="metric-label">Difficulty Level</span>
+                                <span id="diffLevelDisplay" class="badge badge-medium">Medium</span>
+                            </div>
+                            <div class="metric-block reward-preview">
+                                <span class="metric-label">Normal Clear Rewards</span>
+                                <span class="text-gold font-bold">🪙 <span id="previewGold">13</span> Gold</span>
+                                <span class="text-primary font-bold"><span id="previewXp">13</span> XP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnSubmitQuest" class="btn btn-primary full-width font-bold mt-lg">
+                        📝 Sign and Post Quest to Board
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Quest Detail View -->
+    <section id="questDetailView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">⚔️</span>
+                <span class="logo-text">HabitQuest</span>
+            </div>
+            <button id="btnBackToDashboardFromDetail" class="btn btn-sm btn-outline font-bold">⬅ Back to Board</button>
+        </header>
+
+        <div class="app-container">
+            <div class="detail-grid">
+                <!-- Left: Quest Main Actions Panel -->
+                <div class="detail-main-panel">
+                    <div class="card neo-card main-mission-card">
+                        <span id="detailCategoryBadge" class="badge badge-category">STUDY</span>
+                        <h2 id="detailQuestTitle" class="quest-detail-title">Loading Quest Title...</h2>
+                        <p id="detailQuestReason" class="quest-detail-reason">Loading Motivation...</p>
+
+                        <!-- Active Mission Interface (Changes dynamically based on Quest Type) -->
+                        <div class="card neo-card mission-control-card mt-lg">
+                            <h3 class="mission-headline">⚔️ Today's Daily Mission</h3>
+                            
+                            <div id="missionInterfaceContainer">
+                                <!-- Loaded dynamically via quests.js -->
+                            </div>
+                        </div>
+
+                        <!-- Failure Reason Panel (Initially Hidden) -->
+                        <div id="failureReasonPanel" class="card neo-card failure-entry-card mt-lg hidden">
+                            <h3 class="text-danger">⚠️ Mission Failure Log</h3>
+                            <p class="secondary-text">Consistency requires honesty. Log your failure reason to complete today's mission log and check in as Missed.</p>
+                            
+                            <form id="failureReasonForm">
+                                <div class="form-group">
+                                    <label for="failureReasonSelect" class="font-bold">Why did you miss this mission today?</label>
+                                    <select id="failureReasonSelect" required class="form-control">
+                                        <option value="" disabled selected>-- Select a reason --</option>
+                                        <option value="Forgot">Forgot / Mind wandered</option>
+                                        <option value="Busy">Busy / Had no time</option>
+                                        <option value="Low Energy">Low Energy / Tired</option>
+                                        <option value="Target Too Hard">Target Too Hard / Unrealistic</option>
+                                        <option value="No Motivation">No Motivation / Procrastination</option>
+                                        <option value="Environment Problem">Environment Problem / Interruption</option>
+                                        <option value="Other">Other Reason</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="failureNote" class="font-bold">Personal Note / Reflection (Optional)</label>
+                                    <textarea id="failureNote" placeholder="Write what blocked you, and how you will overcome it tomorrow..." class="form-control" rows="3"></textarea>
+                                </div>
+                                <div class="button-row">
+                                    <button type="button" id="btnCancelFailure" class="btn btn-outline">Go Back</button>
+                                    <button type="submit" id="btnConfirmFailure" class="btn btn-danger font-bold">
+                                        ⚠️ Save Failure & Reset Chain
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Quest Status Metrics & History -->
+                <div class="detail-sidebar-panel">
+                    <div class="card neo-card side-card">
+                        <h4 class="card-side-title">📊 Quest Campaign Metrics</h4>
+                        
+                        <div class="metric-list mt-md">
+                            <div class="detail-metric">
+                                <span class="metric-label">Difficulty Rating</span>
+                                <span id="detailDifficultyBadge" class="badge badge-medium">Medium</span>
+                            </div>
+                            <div class="detail-metric">
+                                <span class="metric-label">Current Chain (Streak)</span>
+                                <span id="detailCurrentChain" class="text-primary font-bold">0 Days</span>
+                            </div>
+                            <div class="detail-metric">
+                                <span class="metric-label">Best Chain Record</span>
+                                <span id="detailBestChain" class="text-gold font-bold">0 Days</span>
+                            </div>
+                            <div class="detail-metric">
+                                <span class="metric-label">Total Successful Days</span>
+                                <span id="detailSuccessfulDays" class="text-success font-bold">0 Days</span>
+                            </div>
+                            <div class="detail-metric">
+                                <span class="metric-label">Total Missed Days</span>
+                                <span id="detailMissedDays" class="text-danger font-bold">0 Days</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Section -->
+                        <div class="campaign-progress mt-lg">
+                            <span class="font-bold text-sm block">Quest Campaign Progress</span>
+                            <div class="progress-container mt-xs">
+                                <div id="detailProgressFill" class="progress-fill fill-success" style="width: 0%;"></div>
+                            </div>
+                            <span id="detailProgressText" class="stat-mini-desc mt-xs block">0 / 14 Successful Days (0%)</span>
+                        </div>
+
+                        <!-- Health & Consistency Section -->
+                        <div class="campaign-health mt-lg pt-md border-top">
+                            <div class="detail-metric">
+                                <span class="metric-label">Completion Rate:</span>
+                                <span id="detailCompletionRate" class="font-bold text-dark">0%</span>
+                            </div>
+                            <div class="detail-metric mt-xs">
+                                <span class="metric-label">Quest Health Status:</span>
+                                <span id="detailHealthStatus" class="badge badge-success">Strong</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quest Actions Section -->
+                    <div class="card neo-card side-card mt-md">
+                        <h4 class="card-side-title">📜 Quest Settings</h4>
+                        <div class="actions-stack mt-sm">
+                            <button id="btnPauseQuest" class="btn btn-outline full-width mt-xs font-bold">⏸ Pause Quest</button>
+                            <button id="btnArchiveQuest" class="btn btn-outline full-width mt-xs font-bold">🗂 Archive Quest</button>
+                            <button id="btnDeleteQuest" class="btn btn-danger-outline full-width mt-xs font-bold">🗑 Delete Quest</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Quest Shop View -->
+    <section id="shopView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">⚔️</span>
+                <span class="logo-text">HabitQuest</span>
+            </div>
+            <nav class="header-nav">
+                <button id="navDashboardFromShop" class="nav-link">Quest Board</button>
+                <button id="navShopFromShop" class="nav-link active">Quest Shop</button>
+                <button id="navBagFromShop" class="nav-link">My Bag</button>
+                <button id="btnBackToDashboardFromShop" class="btn btn-sm btn-outline font-bold">⬅ Board</button>
+            </nav>
+        </header>
+
+        <div class="app-container">
+            <!-- Shop Title & Gold Header -->
+            <div class="card neo-card shop-header-card">
+                <div>
+                    <h2 class="shop-title">🏪 The Quest Shop</h2>
+                    <p class="secondary-text">Spend the Gold earned from completing Daily Missions to buy utilities, titles, and themes.</p>
+                </div>
+                <div class="gold-vault-card">
+                    <span class="gold-vault-label">Your Gold Vault</span>
+                    <span id="shopGoldDisplay" class="gold-vault-value">🪙 0</span>
+                </div>
+            </div>
+
+            <!-- Shop Grid -->
+            <div id="shopItemsContainer" class="shop-grid mt-lg">
+                <!-- Shop items loaded dynamically via systems.js and app.js -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Bag View -->
+    <section id="bagView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">⚔️</span>
+                <span class="logo-text">HabitQuest</span>
+            </div>
+            <nav class="header-nav">
+                <button id="navDashboardFromBag" class="nav-link">Quest Board</button>
+                <button id="navShopFromBag" class="nav-link">Quest Shop</button>
+                <button id="navBagFromBag" class="nav-link active">My Bag</button>
+                <button id="btnBackToDashboardFromBag" class="btn btn-sm btn-outline font-bold">⬅ Board</button>
+            </nav>
+        </header>
+
+        <div class="app-container">
+            <!-- Bag Header -->
+            <div class="card neo-card bag-header-card">
+                <div class="bag-header-left">
+                    <span class="bag-emoji">🎒</span>
+                    <div>
+                        <h2 class="bag-title">Your Inventory Bag</h2>
+                        <p class="secondary-text">Equip unlocked adventure titles and apply visual interface themes you bought from the Shop.</p>
+                    </div>
+                </div>
+                
+                <div class="bag-stat-box">
+                    <span class="bag-stat-label">Active Streak Shield count</span>
+                    <span id="bagShieldCount" class="bag-stat-value text-info">🛡️ 0</span>
+                </div>
+            </div>
+
+            <div class="bag-grid mt-lg">
+                <!-- Titles Tab Panel -->
+                <div class="card neo-card inventory-section">
+                    <h3 class="inventory-section-title">🏆 Adventure Titles</h3>
+                    <p class="secondary-text mb-md">Equip a title to show on your adventurer card.</p>
+                    <div id="inventoryTitlesContainer" class="inventory-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Themes Tab Panel -->
+                <div class="card neo-card inventory-section">
+                    <h3 class="inventory-section-title">🎨 Interface Themes</h3>
+                    <p class="secondary-text mb-md">Apply unlocked visual styles to change colors and layouts.</p>
+                    <div id="inventoryThemesContainer" class="inventory-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. Guild Master Panel (Admin View) -->
+    <section id="adminView" class="view hidden">
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-emoji-sm">👑</span>
+                <span class="logo-text">Guild Master Panel</span>
+            </div>
+            <button id="adminLogoutBtn" class="btn btn-sm btn-outline font-bold">Logout</button>
+        </header>
+
+        <div class="app-container">
+            <!-- Top Dashboard Stats -->
+            <div class="grid-4col">
+                <div class="card neo-card stat-metric-card">
+                    <span class="metric-label">Total Users</span>
+                    <span id="adminTotalUsers" class="metric-large">0</span>
+                </div>
+                <div class="card neo-card stat-metric-card">
+                    <span class="metric-label">Active Quests / Total</span>
+                    <span class="metric-large">
+                        <span id="adminActiveQuests" class="text-primary">0</span><span class="slash">/</span><span id="adminTotalQuests">0</span>
+                    </span>
+                </div>
+                <div class="card neo-card stat-metric-card">
+                    <span class="metric-label">Completed Quests</span>
+                    <span id="adminCompletedQuests" class="metric-large text-success">0</span>
+                </div>
+                <div class="card neo-card stat-metric-card">
+                    <span class="metric-label">Missions Today</span>
+                    <span id="adminMissionsToday" class="metric-large text-gold">0</span>
+                </div>
+            </div>
+
+            <div class="grid-2col mt-lg">
+                <!-- Failure Analysis Panel -->
+                <div class="card neo-card admin-details-card">
+                    <h3 class="admin-card-title">⚠️ System Failure Reason Log</h3>
+                    <p class="secondary-text">Aggregation of reasons logged when adventurers checked in as "Missed".</p>
+                    
+                    <div id="adminFailureReasonDistribution" class="failure-distribution-list mt-md">
+                        <!-- Aggregates parsed by admin.js -->
+                        <p class="secondary-text italic">Loading metrics...</p>
+                    </div>
+
+                    <!-- AI-Like Rule-Based Recommendation Card -->
+                    <div class="card neo-card rule-insight-card mt-lg">
+                        <h4 class="insight-title">💡 Guild Master Insight Analysis</h4>
+                        <p id="adminInsightSuggestion" class="insight-text italic">Analyzing aggregates to compile recommendations...</p>
+                    </div>
+                </div>
+
+                <!-- Consistency Leaderboard -->
+                <div class="card neo-card admin-details-card">
+                    <h3 class="admin-card-title">🏆 Adventurer Consistency Standings</h3>
+                    <p class="secondary-text">Ranking users based on total successful days registered in campaigns.</p>
+
+                    <div class="leaderboard-table-container mt-md">
+                        <table class="neo-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Adventurer Name</th>
+                                    <th>Level</th>
+                                    <th>Successful Days</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminLeaderboardBody">
+                                <!-- Loaded dynamically via admin.js -->
+                                <tr>
+                                    <td colspan="4" class="text-center secondary-text italic">Loading standings...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Aggregates Section -->
+                    <div class="metric-list-horizontal mt-lg border-top pt-md">
+                        <div>
+                            <span class="metric-label">Average Campaign Completion Rate</span>
+                            <span id="adminAvgCompletionRate" class="font-bold text-lg text-primary block mt-xs">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Modular Application Imports -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

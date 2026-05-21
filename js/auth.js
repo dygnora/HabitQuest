@@ -1,0 +1,166 @@
+/**
+ * ==========================================================================
+ * HabitQuest - Authentication & Identity Session Manager
+ * ==========================================================================
+ */
+
+import { 
+    auth, 
+    isMockMode, 
+    getDocument, 
+    setDocument 
+} from "./firebase-config.js";
+import { 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// Global Session Variables
+export let currentUserProfile = null;
+let sessionStateListener = null;
+
+// Register session change listener
+export function registerAuthStateListener(onSessionChanged) {
+    sessionStateListener = onSessionChanged;
+    
+    // Wire Firebase / Mock state listener
+    onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+            try {
+                currentUserProfile = await loadUserProfile(firebaseUser);
+                if (currentUserProfile) {
+                    // Check Role Mismatch Security Constraints
+                    if (currentUserProfile.role === "admin" && currentUserProfile.provider !== "password") {
+                        alert("Access Denied: Admin roles are strictly restricted to password authentication.");
+                        await logoutUser();
+                        return;
+                    }
+                    if (currentUserProfile.role === "user" && currentUserProfile.provider !== "google") {
+                        alert("Access Denied: Adventurer roles are strictly restricted to Google accounts.");
+                        await logoutUser();
+                        return;
+                    }
+                    
+                    onSessionChanged(currentUserProfile);
+                } else {
+                    // Profile document error
+                    console.error("Critical: User Profile Document is missing in Database.");
+                    await logoutUser();
+                }
+            } catch (err) {
+                console.error("Profile load or mismatch verification failed:", err);
+                await logoutUser();
+            }
+        } else {
+            currentUserProfile = null;
+            onSessionChanged(null);
+        }
+    });
+}
+
+// 1. ADVENTURER SIGN IN (Google Sign-In)
+export async function loginWithGoogle() {
+    if (isMockMode) {
+        // Mock Popup Login
+        const { user } = await auth.signInWithGoogle();
+        await ensureUserProfileDoc(user, "Hero Adventurer", "google");
+        return true;
+    } else {
+        // Real Google Login
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        await ensureUserProfileDoc(user, user.displayName || "Epic Adventurer", "google");
+        return true;
+    }
+}
+
+// 2. GUILD MASTER SIGN IN (Admin Email/Password)
+export async function loginAsAdmin(email, password) {
+    if (isMockMode) {
+        // Local Mock Admin Credentials Validation
+        await auth.signInWithEmailAndPassword(email, password);
+        return true;
+    } else {
+        // Real Firebase Auth Admin Validation
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+        
+        // Double-check profile exists and validates role
+        const profileSnap = await getDocument("users", user.uid);
+        if (!profileSnap.exists()) {
+            await signOut(auth);
+            throw new Error("auth/admin-unregistered - Admin profile is missing in users database.");
+        }
+        
+        const profile = profileSnap.data();
+        if (profile.role !== "admin") {
+            await signOut(auth);
+            throw new Error("auth/unauthorized-role - Authorized access is locked to administrative roles.");
+        }
+        
+        return true;
+    }
+}
+
+// 3. SECURE SESSION SIGNOUT
+export async function logoutUser() {
+    if (isMockMode) {
+        await auth.signOut();
+    } else {
+        await signOut(auth);
+    }
+}
+
+// 4. LOAD & CONVERT PROFILE TO CURRENT SCHEMA
+async function loadUserProfile(firebaseUser) {
+    const snap = await getDocument("users", firebaseUser.uid);
+    if (snap.exists()) {
+        const data = snap.data();
+        return {
+            uid: firebaseUser.uid,
+            ...data
+        };
+    }
+    return null;
+}
+
+// 5. SECURE DEFAULT USER PROFILE PROVISIONING
+async function ensureUserProfileDoc(firebaseUser, nameStr, providerStr) {
+    const snap = await getDocument("users", firebaseUser.uid);
+    
+    if (!snap.exists()) {
+        console.log(`Initializing default adventurer profile for: ${firebaseUser.uid}`);
+        
+        const defaultProfile = {
+            name: nameStr,
+            email: firebaseUser.email,
+            role: "user",
+            provider: providerStr,
+            gold: 0,
+            xp: 0,
+            level: 1,
+            activeTitle: "Rookie Adventurer",
+            activeTheme: "default",
+            inventory: {
+                streakShield: 0,
+                titleRookie: true,
+                titleFocusKeeper: false,
+                titleChainMaster: false,
+                themeMidnight: false,
+                themeForest: false
+            },
+            createdAt: "serverTimestamp()"
+        };
+        
+        await setDocument("users", firebaseUser.uid, defaultProfile);
+        
+        // If Mocking, save mock user in Mock Database for direct simulation
+        if (isMockMode) {
+            const mockDb = auth; // Mock session uses auth reference
+        }
+    }
+}

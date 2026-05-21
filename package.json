@@ -1,0 +1,24 @@
+{
+  "name": "habitquest",
+  "version": "1.0.0",
+  "description": "Gamified quest-based habit tracking Single Page Application.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.1.0"
+  },
+  "keywords": [
+    "habit-tracker",
+    "gamification",
+    "firebase",
+    "firestore",
+    "single-page-app",
+    "productivity"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

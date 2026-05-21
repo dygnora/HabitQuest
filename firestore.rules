@@ -51,7 +51,7 @@ service cloud.firestore {
 
     // dailyMissions Collection
     match /dailyMissions/{missionId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
       
       // Check deterministic layout (must contain user id)
       allow create: if isAuthenticated() && 

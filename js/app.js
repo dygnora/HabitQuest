@@ -63,8 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Core callback connection when missions are finalized successfully
     registerMissionLoggedCallback(() => {
-        // Redraw quest board and refresh profile stats
-        refreshAppStatesAndDashboard();
+        // Redraw quest board, refresh profile stats, and redirect to dashboard
+        renderDashboardTab();
     });
 });
 

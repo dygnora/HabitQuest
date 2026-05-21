@@ -42,160 +42,190 @@ export async function loadActiveMissionInterface(container, quest, user) {
     
     container.innerHTML = "";
     
-    // Check if duplicate mission already registered today
-    const todayStr = getLocalTodayString();
-    const deterministicId = `${quest.questId}_${user.uid}_${todayStr}`;
-    
-    const missionSnap = await getDocument("dailyMissions", deterministicId);
-    if (missionSnap.exists()) {
-        const missionData = missionSnap.data();
-        container.innerHTML = `
-            <div class="card neo-card success-banner text-center p-md" style="border: 3px solid var(--border); background-color: var(--card);">
-                <span style="font-size: 3rem; display: block; margin-bottom: 10px;">🏆</span>
-                <h3 class="font-bold text-lg" style="font-family: 'Space Grotesk', sans-serif;">Daily Mission Finalized!</h3>
-                <p class="secondary-text mt-sm">Today's tracking is complete with a <span class="badge badge-${missionData.clearLevel.replace(/\s+/g, '-').toLowerCase()}">${missionData.clearLevel}</span> clear tier.</p>
-                <div class="reward-matrix-box mt-md" style="display: flex; justify-content: center; gap: 15px; background: var(--accent-tint); padding: 12px; border: 2px solid var(--border); border-radius: var(--border-radius-md); font-family: 'Space Grotesk', sans-serif; font-weight: bold;">
-                    <span class="text-gold">🪙 +${missionData.goldEarned} Gold</span>
-                    <span class="text-primary">✨ +${missionData.xpEarned} XP</span>
-                </div>
-            </div>`;
-        return;
-    }
-    
-    if (quest.status !== "Active") {
+    if (!user) {
         container.innerHTML = `
             <div class="text-center p-md">
-                <p class="secondary-text italic text-danger">⚠️ Daily check-ins are restricted for paused or completed quests.</p>
+                <p class="secondary-text text-danger font-bold">⚠️ Session Missing</p>
+                <p class="secondary-text text-sm">Please refresh the page and sign in again.</p>
             </div>`;
         return;
     }
     
-    // A. SIMPLE QUEST RENDERING
-    if (quest.questType === "simple") {
-        const reward = calculateReward(quest.difficultyLevel, "Normal");
+    try {
+        // Check if duplicate mission already registered today
+        const todayStr = getLocalTodayString();
+        const deterministicId = `${quest.questId}_${user.uid}_${todayStr}`;
         
-        container.innerHTML = `
-            <div class="simple-quest-control text-center p-md">
-                <p class="mb-sm font-bold text-lg">Have you accomplished this quest today?</p>
-                <div class="reward-preview-box mb-md" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 10px; font-size: 0.9rem; font-weight: bold; display: inline-block;">
-                    <span>Reward on Completion:</span>
-                    <span class="text-gold" style="margin-left: 8px;">🪙 ${reward.goldEarned} Gold</span>
-                    <span class="text-primary" style="margin-left: 12px;">✨ ${reward.xpEarned} XP</span>
-                </div>
-                <div class="grid-2col gap-md">
-                    <button id="btnCompleteSimple" class="btn btn-primary font-bold">🌟 Complete Mission</button>
-                    <button id="btnMissSimple" class="btn btn-danger-outline font-bold">⚠️ Mark as Missed</button>
-                </div>
-            </div>
-        `;
-        
-        document.getElementById("btnCompleteSimple").addEventListener("click", () => {
-            finalizeMissionProcess(quest, "Normal", 0, {});
-        });
-        
-        document.getElementById("btnMissSimple").addEventListener("click", () => {
-            triggerFailureFlow(quest);
-        });
-        
-    // B. FOCUS QUEST RENDERING (Timer stopwatch)
-    } else if (quest.questType === "focus") {
-        focusMin = quest.minimumMinutes || 10;
-        focusNormal = quest.normalMinutes || 30;
-        focusPerfect = quest.perfectMinutes || 60;
-        
-        container.innerHTML = `
-            <div class="focus-quest-control">
-                <!-- Dev Fast Mode Control Badge -->
-                <div class="flex justify-between align-center mb-md">
-                    <span class="mini-desc italic">Self-discipline stopwatch tracking</span>
-                    <label class="flex align-center gap-xs font-bold pointer" style="font-size: 0.75rem;">
-                        <input type="checkbox" id="chkDevSeconds" ${isDevSecondsMode ? "checked" : ""}>
-                        🚀 Dev Mode (Seconds as Minutes)
-                    </label>
-                </div>
-                
-                <div id="stopwatchDisplay" class="timer-display">00:00:00</div>
-                
-                <div class="timer-target-display">
-                    <span id="thresholdMinPill" class="timer-threshold-pill">Min: ${focusMin}m</span>
-                    <span id="thresholdNormalPill" class="timer-threshold-pill">Normal: ${focusNormal}m</span>
-                    <span id="thresholdPerfectPill" class="timer-threshold-pill">Perfect: ${focusPerfect}m</span>
-                </div>
-                
-                <div class="clear-level-preview">
-                    <span class="font-bold">Clear Tier Eligible:</span>
-                    <span id="timerClearTierBadge" class="badge badge-outline text-danger">NOT ELIGIBLE</span>
-                </div>
-                
-                <div id="focusRewardPreview" class="reward-preview-box mt-xs hidden" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
-                    <span>Estimated Reward:</span>
-                    <span class="text-gold" style="margin-left: 5px;">🪙 <span id="focusGoldReward">0</span> Gold</span>
-                    <span class="text-primary" style="margin-left: 10px;">✨ <span id="focusXpReward">0</span> XP</span>
-                </div>
-                
-                <div class="grid-4col gap-xs mt-md">
-                    <button id="btnTimerStart" class="btn btn-primary btn-sm font-bold">Start</button>
-                    <button id="btnTimerPause" class="btn btn-outline btn-sm font-bold" disabled>Pause</button>
-                    <button id="btnTimerResume" class="btn btn-outline btn-sm font-bold" disabled>Resume</button>
-                    <button id="btnTimerStop" class="btn btn-dark btn-sm font-bold" disabled>Stop</button>
-                </div>
-                
-                <button id="btnTimerFinalize" class="btn btn-primary full-width font-bold mt-md" disabled>
-                    🏆 Finalize Daily Mission
-                </button>
-            </div>
-        `;
-        
-        // Add Timer Watchers & Event Handlers
-        const devChk = document.getElementById("chkDevSeconds");
-        if (devChk) {
-            devChk.addEventListener("change", (e) => {
-                isDevSecondsMode = e.target.checked;
-                updateStopwatchUI(quest);
-            });
+        const missionSnap = await getDocument("dailyMissions", deterministicId);
+        if (missionSnap.exists()) {
+            const missionData = missionSnap.data();
+            container.innerHTML = `
+                <div class="card neo-card success-banner text-center p-md" style="border: 3px solid var(--border); background-color: var(--card);">
+                    <span style="font-size: 3rem; display: block; margin-bottom: 10px;">🏆</span>
+                    <h3 class="font-bold text-lg" style="font-family: 'Space Grotesk', sans-serif;">Daily Mission Finalized!</h3>
+                    <p class="secondary-text mt-sm">Today's tracking is complete with a <span class="badge badge-${missionData.clearLevel.replace(/\s+/g, '-').toLowerCase()}">${missionData.clearLevel}</span> clear tier.</p>
+                    <div class="reward-matrix-box mt-md" style="display: flex; justify-content: center; gap: 15px; background: var(--accent-tint); padding: 12px; border: 2px solid var(--border); border-radius: var(--border-radius-md); font-family: 'Space Grotesk', sans-serif; font-weight: bold;">
+                        <span class="text-gold">🪙 +${missionData.goldEarned} Gold</span>
+                        <span class="text-primary">✨ +${missionData.xpEarned} XP</span>
+                    </div>
+                </div>`;
+            return;
         }
         
-        document.getElementById("btnTimerStart").addEventListener("click", () => startStopwatch(quest));
-        document.getElementById("btnTimerPause").addEventListener("click", () => pauseStopwatch());
-        document.getElementById("btnTimerResume").addEventListener("click", () => resumeStopwatch(quest));
-        document.getElementById("btnTimerStop").addEventListener("click", () => stopStopwatch(quest));
-        document.getElementById("btnTimerFinalize").addEventListener("click", () => finalizeFocusMission(quest));
+        if (quest.status !== "Active") {
+            container.innerHTML = `
+                <div class="text-center p-md">
+                    <p class="secondary-text italic text-danger">⚠️ Daily check-ins are restricted for paused or completed quests.</p>
+                </div>`;
+            return;
+        }
         
-        updateStopwatchUI(quest);
-        
-    // C. MULTI MISSION QUEST RENDERING (Checklist checklist)
-    } else if (quest.questType === "multi") {
-        multiMissionTargets = {};
-        quest.dailyTargets.forEach(t => {
-            multiMissionTargets[t.id] = { name: t.name, done: false, checkedAt: null };
-        });
-        
+        // A. SIMPLE QUEST RENDERING
+        if (quest.questType === "simple") {
+            const reward = calculateReward(quest.difficultyLevel, "Normal");
+            
+            container.innerHTML = `
+                <div class="simple-quest-control text-center p-md">
+                    <p class="mb-sm font-bold text-lg">Have you accomplished this quest today?</p>
+                    <div class="reward-preview-box mb-md" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 10px; font-size: 0.9rem; font-weight: bold; display: inline-block;">
+                        <span>Reward on Completion:</span>
+                        <span class="text-gold" style="margin-left: 8px;">🪙 ${reward.goldEarned} Gold</span>
+                        <span class="text-primary" style="margin-left: 12px;">✨ ${reward.xpEarned} XP</span>
+                    </div>
+                    <div class="grid-2col gap-md">
+                        <button id="btnCompleteSimple" class="btn btn-primary font-bold">🌟 Complete Mission</button>
+                        <button id="btnMissSimple" class="btn btn-danger-outline font-bold">⚠️ Mark as Missed</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById("btnCompleteSimple").addEventListener("click", () => {
+                finalizeMissionProcess(quest, "Normal", 0, {});
+            });
+            
+            document.getElementById("btnMissSimple").addEventListener("click", () => {
+                triggerFailureFlow(quest);
+            });
+            
+        // B. FOCUS QUEST RENDERING (Timer stopwatch)
+        } else if (quest.questType === "focus") {
+            focusMin = quest.minimumMinutes || 10;
+            focusNormal = quest.normalMinutes || 30;
+            focusPerfect = quest.perfectMinutes || 60;
+            
+            container.innerHTML = `
+                <div class="focus-quest-control">
+                    <!-- Dev Fast Mode Control Badge -->
+                    <div class="flex justify-between align-center mb-md">
+                        <span class="mini-desc italic">Self-discipline stopwatch tracking</span>
+                        <label class="flex align-center gap-xs font-bold pointer" style="font-size: 0.75rem;">
+                            <input type="checkbox" id="chkDevSeconds" ${isDevSecondsMode ? "checked" : ""}>
+                            🚀 Dev Mode (Seconds as Minutes)
+                        </label>
+                    </div>
+                    
+                    <div id="stopwatchDisplay" class="timer-display">00:00:00</div>
+                    
+                    <div class="timer-target-display">
+                        <span id="thresholdMinPill" class="timer-threshold-pill">Min: ${focusMin}m</span>
+                        <span id="thresholdNormalPill" class="timer-threshold-pill">Normal: ${focusNormal}m</span>
+                        <span id="thresholdPerfectPill" class="timer-threshold-pill">Perfect: ${focusPerfect}m</span>
+                    </div>
+                    
+                    <div class="clear-level-preview">
+                        <span class="font-bold">Clear Tier Eligible:</span>
+                        <span id="timerClearTierBadge" class="badge badge-outline text-danger">NOT ELIGIBLE</span>
+                    </div>
+                    
+                    <div id="focusRewardPreview" class="reward-preview-box mt-xs hidden" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
+                        <span>Estimated Reward:</span>
+                        <span class="text-gold" style="margin-left: 5px;">🪙 <span id="focusGoldReward">0</span> Gold</span>
+                        <span class="text-primary" style="margin-left: 10px;">✨ <span id="focusXpReward">0</span> XP</span>
+                    </div>
+                    
+                    <div class="grid-4col gap-xs mt-md">
+                        <button id="btnTimerStart" class="btn btn-primary btn-sm font-bold">Start</button>
+                        <button id="btnTimerPause" class="btn btn-outline btn-sm font-bold" disabled>Pause</button>
+                        <button id="btnTimerResume" class="btn btn-outline btn-sm font-bold" disabled>Resume</button>
+                        <button id="btnTimerStop" class="btn btn-dark btn-sm font-bold" disabled>Stop</button>
+                    </div>
+                    
+                    <button id="btnTimerFinalize" class="btn btn-primary full-width font-bold mt-md" disabled>
+                        🏆 Finalize Daily Mission
+                    </button>
+                </div>
+            `;
+            
+            // Add Timer Watchers & Event Handlers
+            const devChk = document.getElementById("chkDevSeconds");
+            if (devChk) {
+                devChk.addEventListener("change", (e) => {
+                    isDevSecondsMode = e.target.checked;
+                    updateStopwatchUI(quest);
+                });
+            }
+            
+            document.getElementById("btnTimerStart").addEventListener("click", () => startStopwatch(quest));
+            document.getElementById("btnTimerPause").addEventListener("click", () => pauseStopwatch());
+            document.getElementById("btnTimerResume").addEventListener("click", () => resumeStopwatch(quest));
+            document.getElementById("btnTimerStop").addEventListener("click", () => stopStopwatch(quest));
+            document.getElementById("btnTimerFinalize").addEventListener("click", () => finalizeFocusMission(quest));
+            
+            updateStopwatchUI(quest);
+            
+        // C. MULTI MISSION QUEST RENDERING (Checklist checklist)
+        } else if (quest.questType === "multi") {
+            multiMissionTargets = {};
+            quest.dailyTargets.forEach(t => {
+                multiMissionTargets[t.id] = { name: t.name, done: false, checkedAt: null };
+            });
+            
+            container.innerHTML = `
+                <div class="multi-quest-control">
+                    <p class="secondary-text mb-md font-bold">Check off completed sub-targets for today:</p>
+                    <div id="subtargetsChecklistContainer" class="checklist-targets-box">
+                        <!-- Loaded dynamically below -->
+                    </div>
+                    
+                    <div class="clear-level-preview">
+                        <span class="font-bold">Progress Rate: <span id="multiProgressText" class="text-primary">0/0 Done</span></span>
+                        <span id="multiClearTierBadge" class="badge badge-outline text-danger">MISSED</span>
+                    </div>
+                    
+                    <div id="multiRewardPreview" class="reward-preview-box mt-xs" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
+                        <span>Estimated Reward:</span>
+                        <span class="text-gold" style="margin-left: 5px;">🪙 <span id="multiGoldReward">0</span> Gold</span>
+                        <span class="text-primary" style="margin-left: 10px;">✨ <span id="multiXpReward">0</span> XP</span>
+                    </div>
+                    
+                    <button id="btnFinalizeMulti" class="btn btn-primary full-width font-bold mt-md">
+                        🏆 Finalize Daily Mission Checklist
+                    </button>
+                </div>
+            `;
+            
+            renderMultiChecklistUI(quest);
+            document.getElementById("btnFinalizeMulti").addEventListener("click", () => finalizeMultiMission(quest));
+        }
+    } catch (err) {
+        console.error("Failed to load active mission interface:", err);
+        const isPermissionError = err.message?.toLowerCase().includes("permission") || err.code?.toLowerCase().includes("permission");
         container.innerHTML = `
-            <div class="multi-quest-control">
-                <p class="secondary-text mb-md font-bold">Check off completed sub-targets for today:</p>
-                <div id="subtargetsChecklistContainer" class="checklist-targets-box">
-                    <!-- Loaded dynamically below -->
-                </div>
-                
-                <div class="clear-level-preview">
-                    <span class="font-bold">Progress Rate: <span id="multiProgressText" class="text-primary">0/0 Done</span></span>
-                    <span id="multiClearTierBadge" class="badge badge-outline text-danger">MISSED</span>
-                </div>
-                
-                <div id="multiRewardPreview" class="reward-preview-box mt-xs" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
-                    <span>Estimated Reward:</span>
-                    <span class="text-gold" style="margin-left: 5px;">🪙 <span id="multiGoldReward">0</span> Gold</span>
-                    <span class="text-primary" style="margin-left: 10px;">✨ <span id="multiXpReward">0</span> XP</span>
-                </div>
-                
-                <button id="btnFinalizeMulti" class="btn btn-primary full-width font-bold mt-md">
-                    🏆 Finalize Daily Mission Checklist
-                </button>
+            <div class="card neo-card text-center p-md" style="border: 3px solid var(--danger); background-color: var(--card);">
+                <span style="font-size: 3rem; display: block; margin-bottom: 10px;">⚠️</span>
+                <h3 class="font-bold text-lg text-danger" style="font-family: 'Space Grotesk', sans-serif;">Failed to Load Mission Controls</h3>
+                <p class="secondary-text mt-sm">Firestore Database returned a security or permission error.</p>
+                ${isPermissionError ? `
+                    <div class="card neo-card mt-md p-sm text-left" style="font-size: 0.85rem; border: 2px solid var(--border); background-color: var(--accent-tint);">
+                        <strong>💡 Guild Master action required:</strong><br>
+                        You have configured a live Firebase project but the Firestore Security Rules have not been deployed yet. Please run the following command in your project terminal to authorize daily check-ins:<br>
+                        <code class="font-bold" style="background: var(--bg); padding: 2px 4px; display: inline-block; margin-top: 6px; border-radius: var(--border-radius-xs); border: 1px solid var(--border);">firebase deploy --only firestore:rules</code>
+                    </div>
+                ` : `
+                    <p class="secondary-text text-xs mt-sm">${err.message || err}</p>
+                `}
             </div>
         `;
-        
-        renderMultiChecklistUI(quest);
-        document.getElementById("btnFinalizeMulti").addEventListener("click", () => finalizeMultiMission(quest));
     }
 }
 
@@ -538,6 +568,7 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
         } else {
             alert("Firestore Transaction Failed: Unable to finalize mission log.");
         }
+    } finally {
         enableAllMissionActions();
     }
 }

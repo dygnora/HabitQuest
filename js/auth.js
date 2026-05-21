@@ -35,34 +35,40 @@ export function registerAuthStateListener(onSessionChanged) {
                 const snap = await getDocument("users", firebaseUser.uid);
                 if (!snap.exists()) {
                     if (firebaseUser.email === "admin@habitquest.com") {
-                        console.error("Critical: Admin User Profile Document is missing in Database.");
-                        await logoutUser();
-                        return;
+                        console.log(`Auto-provisioning missing Admin Firestore profile in state listener for: ${firebaseUser.uid}`);
+                        const adminProfile = {
+                            name: "Guild Master",
+                            email: "admin@habitquest.com",
+                            role: "admin",
+                            provider: "password",
+                            createdAt: "serverTimestamp()"
+                        };
+                        await setDocument("users", firebaseUser.uid, adminProfile);
+                    } else {
+                        console.log(`Initializing default adventurer profile for: ${firebaseUser.uid}`);
+                        const nameStr = firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Epic Adventurer";
+                        const defaultProfile = {
+                            name: nameStr,
+                            email: firebaseUser.email,
+                            role: "user",
+                            provider: "google",
+                            gold: 0,
+                            xp: 0,
+                            level: 1,
+                            activeTitle: "Rookie Adventurer",
+                            activeTheme: "default",
+                            inventory: {
+                                streakShield: 0,
+                                titleRookie: true,
+                                titleFocusKeeper: false,
+                                titleChainMaster: false,
+                                themeMidnight: false,
+                                themeForest: false
+                            },
+                            createdAt: "serverTimestamp()"
+                        };
+                        await setDocument("users", firebaseUser.uid, defaultProfile);
                     }
-                    
-                    console.log(`Initializing default adventurer profile for: ${firebaseUser.uid}`);
-                    const nameStr = firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Epic Adventurer";
-                    const defaultProfile = {
-                        name: nameStr,
-                        email: firebaseUser.email,
-                        role: "user",
-                        provider: "google",
-                        gold: 0,
-                        xp: 0,
-                        level: 1,
-                        activeTitle: "Rookie Adventurer",
-                        activeTheme: "default",
-                        inventory: {
-                            streakShield: 0,
-                            titleRookie: true,
-                            titleFocusKeeper: false,
-                            titleChainMaster: false,
-                            themeMidnight: false,
-                            themeForest: false
-                        },
-                        createdAt: "serverTimestamp()"
-                    };
-                    await setDocument("users", firebaseUser.uid, defaultProfile);
                 }
 
                 currentUserProfile = await loadUserProfile(firebaseUser);
@@ -121,17 +127,24 @@ export async function loginAsAdmin(email, password) {
         const result = await signInWithEmailAndPassword(auth, email, password);
         const user = result.user;
         
-        // Double-check profile exists and validates role
+        // Double-check profile exists, auto-provision it if missing, and validate role
         const profileSnap = await getDocument("users", user.uid);
         if (!profileSnap.exists()) {
-            await signOut(auth);
-            throw new Error("auth/admin-unregistered - Admin profile is missing in users database.");
-        }
-        
-        const profile = profileSnap.data();
-        if (profile.role !== "admin") {
-            await signOut(auth);
-            throw new Error("auth/unauthorized-role - Authorized access is locked to administrative roles.");
+            console.log(`Auto-provisioning missing Admin Firestore profile for: ${user.uid}`);
+            const adminProfile = {
+                name: "Guild Master",
+                email: "admin@habitquest.com",
+                role: "admin",
+                provider: "password",
+                createdAt: "serverTimestamp()"
+            };
+            await setDocument("users", user.uid, adminProfile);
+        } else {
+            const profile = profileSnap.data();
+            if (profile.role !== "admin") {
+                await signOut(auth);
+                throw new Error("auth/unauthorized-role - Authorized access is locked to administrative roles.");
+            }
         }
         
         return true;

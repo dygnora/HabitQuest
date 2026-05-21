@@ -138,9 +138,10 @@ export function renderQuestBoard(onQuestClicked) {
     let activeQuests = userQuests.filter(q => q.status === "Active" || q.status === "Paused");
     let completedQuests = userQuests.filter(q => q.status === "Completed" || q.status === "Archived" || q.status === "Abandoned");
     
-    // Stats overall calculations
-    let totalConsistentDays = userQuests.reduce((sum, q) => sum + (q.successfulDays || 0), 0);
-    let maxBestChain = userQuests.reduce((max, q) => Math.max(max, q.bestChain || 0), 0);
+    // Stats overall calculations (filter out deleted/archived and abandoned quests from the achievements statistics)
+    const activeOrCompletedQuests = userQuests.filter(q => q.status !== "Archived" && q.status !== "Abandoned");
+    let totalConsistentDays = activeOrCompletedQuests.reduce((sum, q) => sum + (q.successfulDays || 0), 0);
+    let maxBestChain = activeOrCompletedQuests.reduce((max, q) => Math.max(max, q.bestChain || 0), 0);
     
     if (activeCountSpan) activeCountSpan.innerText = `${totalConsistentDays} Days`;
     if (bestChainSpan) bestChainSpan.innerText = `${maxBestChain} Days`;

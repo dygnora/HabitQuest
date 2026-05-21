@@ -28,16 +28,17 @@ export async function loadAndRenderAdminPanel() {
         
         // B. CALCULATE STATS
         const totalUsers = adventurers.length;
-        const totalQuests = allQuests.length;
-        const activeQuests = allQuests.filter(q => q.status === "Active").length;
-        const completedQuests = allQuests.filter(q => q.status === "Completed").length;
+        const nonArchivedQuests = allQuests.filter(q => q.status !== "Archived" && q.status !== "Abandoned");
+        const totalQuests = nonArchivedQuests.length;
+        const activeQuests = nonArchivedQuests.filter(q => q.status === "Active").length;
+        const completedQuests = nonArchivedQuests.filter(q => q.status === "Completed").length;
         const missionsToday = allMissions.filter(m => m.date === todayStr).length;
         
-        // Calculate average completion rate across all quests
+        // Calculate average completion rate across non-archived quests
         let sumRate = 0;
         let countedQuests = 0;
         
-        allQuests.forEach(quest => {
+        nonArchivedQuests.forEach(quest => {
             // Recompute elapsed days for completion rate calculation
             const start = new Date(quest.startDate);
             const today = new Date();
@@ -91,7 +92,7 @@ export async function loadAndRenderAdminPanel() {
         generateAdminSuggestion(failureCounts);
         
         // D. COMPUTE LEADERBOARD STANDINGS
-        // Rank users by aggregate consistency (sum of successfulDays across all their quests)
+        // Rank users by aggregate consistency (sum of successfulDays across non-archived quests)
         const userConsistencyMap = {};
         
         // Seed adventurers
@@ -103,7 +104,7 @@ export async function loadAndRenderAdminPanel() {
             };
         });
         
-        allQuests.forEach(quest => {
+        nonArchivedQuests.forEach(quest => {
             if (userConsistencyMap[quest.userId]) {
                 userConsistencyMap[quest.userId].successfulDays += (quest.successfulDays || 0);
             }

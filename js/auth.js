@@ -30,6 +30,41 @@ export function registerAuthStateListener(onSessionChanged) {
     onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
             try {
+                // Securely ensure that the user profile document exists in the database.
+                // This prevents race conditions where the auth state fires before login completes.
+                const snap = await getDocument("users", firebaseUser.uid);
+                if (!snap.exists()) {
+                    if (firebaseUser.email === "admin@habitquest.com") {
+                        console.error("Critical: Admin User Profile Document is missing in Database.");
+                        await logoutUser();
+                        return;
+                    }
+                    
+                    console.log(`Initializing default adventurer profile for: ${firebaseUser.uid}`);
+                    const nameStr = firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Epic Adventurer";
+                    const defaultProfile = {
+                        name: nameStr,
+                        email: firebaseUser.email,
+                        role: "user",
+                        provider: "google",
+                        gold: 0,
+                        xp: 0,
+                        level: 1,
+                        activeTitle: "Rookie Adventurer",
+                        activeTheme: "default",
+                        inventory: {
+                            streakShield: 0,
+                            titleRookie: true,
+                            titleFocusKeeper: false,
+                            titleChainMaster: false,
+                            themeMidnight: false,
+                            themeForest: false
+                        },
+                        createdAt: "serverTimestamp()"
+                    };
+                    await setDocument("users", firebaseUser.uid, defaultProfile);
+                }
+
                 currentUserProfile = await loadUserProfile(firebaseUser);
                 if (currentUserProfile) {
                     // Check Role Mismatch Security Constraints
@@ -65,15 +100,12 @@ export function registerAuthStateListener(onSessionChanged) {
 export async function loginWithGoogle() {
     if (isMockMode) {
         // Mock Popup Login
-        const { user } = await auth.signInWithGoogle();
-        await ensureUserProfileDoc(user, "Hero Adventurer", "google");
+        await auth.signInWithGoogle();
         return true;
     } else {
         // Real Google Login
         const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        await ensureUserProfileDoc(user, user.displayName || "Epic Adventurer", "google");
+        await signInWithPopup(auth, provider);
         return true;
     }
 }
@@ -128,39 +160,4 @@ async function loadUserProfile(firebaseUser) {
     return null;
 }
 
-// 5. SECURE DEFAULT USER PROFILE PROVISIONING
-async function ensureUserProfileDoc(firebaseUser, nameStr, providerStr) {
-    const snap = await getDocument("users", firebaseUser.uid);
-    
-    if (!snap.exists()) {
-        console.log(`Initializing default adventurer profile for: ${firebaseUser.uid}`);
-        
-        const defaultProfile = {
-            name: nameStr,
-            email: firebaseUser.email,
-            role: "user",
-            provider: providerStr,
-            gold: 0,
-            xp: 0,
-            level: 1,
-            activeTitle: "Rookie Adventurer",
-            activeTheme: "default",
-            inventory: {
-                streakShield: 0,
-                titleRookie: true,
-                titleFocusKeeper: false,
-                titleChainMaster: false,
-                themeMidnight: false,
-                themeForest: false
-            },
-            createdAt: "serverTimestamp()"
-        };
-        
-        await setDocument("users", firebaseUser.uid, defaultProfile);
-        
-        // If Mocking, save mock user in Mock Database for direct simulation
-        if (isMockMode) {
-            const mockDb = auth; // Mock session uses auth reference
-        }
-    }
-}
+// Profile auto-provisioning is securely handled by registerAuthStateListener upon first auth event

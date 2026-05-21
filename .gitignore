@@ -1,8 +1,40 @@
-@"
+# Dependencies
 node_modules/
-.env
+.pnp
+.pnp.js
+
+# Production / Builds
 dist/
 build/
-.vite/
+
+# Environment Variables & Sensitive Credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# Logs and databases
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+.firebase/
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+
+# Editor & OS Files
 .DS_Store
-"@ > .gitignore
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db

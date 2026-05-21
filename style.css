@@ -374,6 +374,11 @@ h1, h2, h3, h4, h5, h6 {
 .badge-hard { background-color: var(--danger); color: #FFFFFF; }
 .badge-extreme { background-color: var(--dark); color: #FFFFFF; }
 .badge-category { background-color: var(--accent-tint); color: var(--text); }
+.badge-perfect { background-color: #6C5CE7; color: #FFFFFF; }
+.badge-normal { background-color: var(--success); color: #FFFFFF; }
+.badge-minimum { background-color: var(--gold); color: #1E1E1E; }
+.badge-missed { background-color: var(--danger); color: #FFFFFF; }
+.badge-shielded-missed { border: 2px dashed var(--gold); background-color: var(--accent-tint); color: var(--text); text-transform: uppercase; }
 
 /* 9. Header Section UI */
 .app-header {

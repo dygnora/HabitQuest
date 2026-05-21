@@ -26,7 +26,7 @@ import {
     loadActiveMissionInterface, 
     registerMissionLoggedCallback 
 } from "./missions.js";
-import { calculateDifficulty, calculateLevel, SHOP_ITEMS } from "./systems.js";
+import { calculateDifficulty, calculateLevel, SHOP_ITEMS, calculateReward } from "./systems.js";
 import { loadAndRenderAdminPanel } from "./admin.js";
 
 // Active Global State Variables
@@ -458,25 +458,17 @@ function triggerRealtimeAssessment() {
         badge.className = `badge ${diffClass}`;
     }
     
-    // Rewards preview preview
-    // Hardcoded reward rules (normal clear base gold/XP = 10 multiplied by diffLevel)
-    let rewardMultiplier = 1.0;
-    if (assessment.level === "Easy") rewardMultiplier = 1.0;
-    else if (assessment.level === "Medium") rewardMultiplier = 1.3;
-    else if (assessment.level === "Hard") rewardMultiplier = 1.6;
-    else if (assessment.level === "Extreme") rewardMultiplier = 2.0;
+    // Rewards preview using centralized calculation
+    const reward = calculateReward(assessment.level, "Normal");
     
-    const rewardsGold = Math.round(10 * rewardMultiplier);
-    const rewardsXp = Math.round(10 * rewardMultiplier);
-    
-    document.getElementById("previewGold").innerText = rewardsGold;
-    document.getElementById("previewXp").innerText = rewardsXp;
+    document.getElementById("previewGold").innerText = reward.goldEarned;
+    document.getElementById("previewXp").innerText = reward.xpEarned;
 }
 
 // ==========================================================================
 // 7. QUEST CAMPAIGN DETAILED VIEW RENDER
 // ==========================================================================
-function openQuestDetailView(questId) {
+async function openQuestDetailView(questId) {
     const quest = userQuests.find(q => q.questId === questId);
     if (!quest) return;
     
@@ -535,9 +527,28 @@ function openQuestDetailView(questId) {
     const failForm = document.getElementById("failureReasonForm");
     if (failForm) failForm.reset();
     
+    // Calculate and populate the Sidebar Campaign Reward Matrix previews
+    const rewardMin = calculateReward(quest.difficultyLevel, "Minimum");
+    const rewardNorm = calculateReward(quest.difficultyLevel, "Normal");
+    const rewardPerf = calculateReward(quest.difficultyLevel, "Perfect");
+    
+    const minGoldEl = document.getElementById("detailRewardMinGold");
+    const minXpEl = document.getElementById("detailRewardMinXp");
+    const normGoldEl = document.getElementById("detailRewardNormGold");
+    const normXpEl = document.getElementById("detailRewardNormXp");
+    const perfGoldEl = document.getElementById("detailRewardPerfGold");
+    const perfXpEl = document.getElementById("detailRewardPerfXp");
+    
+    if (minGoldEl) minGoldEl.innerText = `🪙 +${rewardMin.goldEarned} Gold`;
+    if (minXpEl) minXpEl.innerText = `✨ +${rewardMin.xpEarned} XP`;
+    if (normGoldEl) normGoldEl.innerText = `🪙 +${rewardNorm.goldEarned} Gold`;
+    if (normXpEl) normXpEl.innerText = `✨ +${rewardNorm.xpEarned} XP`;
+    if (perfGoldEl) perfGoldEl.innerText = `🪙 +${rewardPerf.goldEarned} Gold`;
+    if (perfXpEl) perfXpEl.innerText = `✨ +${rewardPerf.xpEarned} XP`;
+    
     // Renders active daily mission controls interface
     const missionContainer = document.getElementById("missionInterfaceContainer");
-    loadActiveMissionInterface(missionContainer, quest, currentUserProfile);
+    await loadActiveMissionInterface(missionContainer, quest, currentUserProfile);
 }
 
 // Compute quest metrics locally

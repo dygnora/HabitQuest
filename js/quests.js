@@ -11,21 +11,11 @@ import {
     updateDocument 
 } from "./firebase-config.js";
 import { currentUserProfile } from "./auth.js";
-import { calculateDifficulty, calculateQuestHealth } from "./systems.js";
-import { loadActiveMissionInterface } from "./missions.js";
+import { calculateDifficulty, calculateQuestHealth, getLocalTodayString } from "./systems.js";
 
 // Active user session cache
 export let userQuests = [];
 export let todayMissions = {}; // Map of missionId -> missionData to check completions
-
-// Helper: Get YYYY-MM-DD Date String in Client Local Time
-export function getLocalTodayString() {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-}
 
 // 1. CREATE QUEST SUBMISSION
 export async function createQuest(title, reason, category, type, challengeDays, frequency, extraParams) {

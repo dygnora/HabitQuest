@@ -311,7 +311,7 @@ export function mockIncrement(val) {
 }
 
 // Transaction simulation wrapper to check duplicate and finalize safely
-export async function executeMissionTransaction(missionId, userId, questId, rewardGold, rewardXp, levelIncrement, chainAction, shieldDeduct, updatedQuestStats, newMissionData) {
+export async function executeMissionTransaction(missionId, userId, questId, rewardGold, rewardXp, shieldDeduct, updatedQuestStats, newMissionData) {
     if (isMock) {
         const data = mockDb.getData();
         if (!data.dailyMissions) data.dailyMissions = {};
@@ -342,8 +342,10 @@ export async function executeMissionTransaction(missionId, userId, questId, rewa
         if (data.users[userId]) {
             const user = data.users[userId];
             user.gold = (user.gold || 0) + rewardGold;
-            user.xp = (user.xp || 0) + rewardXp;
-            user.level = (user.level || 1) + levelIncrement;
+            const newXp = (user.xp || 0) + rewardXp;
+            const newLevel = Math.floor(newXp / 100) + 1;
+            user.xp = newXp;
+            user.level = newLevel;
             
             if (shieldDeduct) {
                 user.inventory.streakShield = Math.max(0, (user.inventory.streakShield || 0) - 1);
@@ -375,11 +377,10 @@ export async function executeMissionTransaction(missionId, userId, questId, rewa
             // Calculate updates
             const currentGold = userData.gold || 0;
             const currentXp = userData.xp || 0;
-            const currentLevel = userData.level || 1;
             
             const newGold = currentGold + rewardGold;
             const newXp = currentXp + rewardXp;
-            const newLevel = currentLevel + levelIncrement;
+            const newLevel = Math.floor(newXp / 100) + 1;
             
             const userUpdates = {
                 gold: newGold,

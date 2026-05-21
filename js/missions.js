@@ -6,8 +6,13 @@
 
 import { executeMissionTransaction, getDocument } from "./firebase-config.js";
 import { currentUserProfile } from "./auth.js";
-import { calculateRewards, calculateLevel } from "./systems.js";
-import { getLocalTodayString, loadUserQuestsAndTodayLogs } from "./quests.js";
+import { 
+    calculateReward, 
+    determineFocusClearLevel, 
+    determineMultiClearLevel, 
+    getLocalTodayString 
+} from "./systems.js";
+import { loadUserQuestsAndTodayLogs } from "./quests.js";
 
 // Session execution variables
 let activeInterval = null;
@@ -29,7 +34,7 @@ export function registerMissionLoggedCallback(callback) {
 }
 
 // 1. DYNAMICALLY LOAD TODAYS MISSION INTERFACE
-export function loadActiveMissionInterface(container, quest, user) {
+export async function loadActiveMissionInterface(container, quest, user) {
     clearInterval(activeInterval);
     activeInterval = null;
     timerRunning = false;
@@ -41,6 +46,22 @@ export function loadActiveMissionInterface(container, quest, user) {
     const todayStr = getLocalTodayString();
     const deterministicId = `${quest.questId}_${user.uid}_${todayStr}`;
     
+    const missionSnap = await getDocument("dailyMissions", deterministicId);
+    if (missionSnap.exists()) {
+        const missionData = missionSnap.data();
+        container.innerHTML = `
+            <div class="card neo-card success-banner text-center p-md" style="border: 3px solid var(--border); background-color: var(--card);">
+                <span style="font-size: 3rem; display: block; margin-bottom: 10px;">🏆</span>
+                <h3 class="font-bold text-lg" style="font-family: 'Space Grotesk', sans-serif;">Daily Mission Finalized!</h3>
+                <p class="secondary-text mt-sm">Today's tracking is complete with a <span class="badge badge-${missionData.clearLevel.replace(/\s+/g, '-').toLowerCase()}">${missionData.clearLevel}</span> clear tier.</p>
+                <div class="reward-matrix-box mt-md" style="display: flex; justify-content: center; gap: 15px; background: var(--accent-tint); padding: 12px; border: 2px solid var(--border); border-radius: var(--border-radius-md); font-family: 'Space Grotesk', sans-serif; font-weight: bold;">
+                    <span class="text-gold">🪙 +${missionData.goldEarned} Gold</span>
+                    <span class="text-primary">✨ +${missionData.xpEarned} XP</span>
+                </div>
+            </div>`;
+        return;
+    }
+    
     if (quest.status !== "Active") {
         container.innerHTML = `
             <div class="text-center p-md">
@@ -51,9 +72,16 @@ export function loadActiveMissionInterface(container, quest, user) {
     
     // A. SIMPLE QUEST RENDERING
     if (quest.questType === "simple") {
+        const reward = calculateReward(quest.difficultyLevel, "Normal");
+        
         container.innerHTML = `
             <div class="simple-quest-control text-center p-md">
-                <p class="mb-md font-bold text-lg">Have you accomplished this quest today?</p>
+                <p class="mb-sm font-bold text-lg">Have you accomplished this quest today?</p>
+                <div class="reward-preview-box mb-md" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 10px; font-size: 0.9rem; font-weight: bold; display: inline-block;">
+                    <span>Reward on Completion:</span>
+                    <span class="text-gold" style="margin-left: 8px;">🪙 ${reward.goldEarned} Gold</span>
+                    <span class="text-primary" style="margin-left: 12px;">✨ ${reward.xpEarned} XP</span>
+                </div>
                 <div class="grid-2col gap-md">
                     <button id="btnCompleteSimple" class="btn btn-primary font-bold">🌟 Complete Mission</button>
                     <button id="btnMissSimple" class="btn btn-danger-outline font-bold">⚠️ Mark as Missed</button>
@@ -99,6 +127,12 @@ export function loadActiveMissionInterface(container, quest, user) {
                     <span id="timerClearTierBadge" class="badge badge-outline text-danger">NOT ELIGIBLE</span>
                 </div>
                 
+                <div id="focusRewardPreview" class="reward-preview-box mt-xs hidden" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
+                    <span>Estimated Reward:</span>
+                    <span class="text-gold" style="margin-left: 5px;">🪙 <span id="focusGoldReward">0</span> Gold</span>
+                    <span class="text-primary" style="margin-left: 10px;">✨ <span id="focusXpReward">0</span> XP</span>
+                </div>
+                
                 <div class="grid-4col gap-xs mt-md">
                     <button id="btnTimerStart" class="btn btn-primary btn-sm font-bold">Start</button>
                     <button id="btnTimerPause" class="btn btn-outline btn-sm font-bold" disabled>Pause</button>
@@ -117,7 +151,7 @@ export function loadActiveMissionInterface(container, quest, user) {
         if (devChk) {
             devChk.addEventListener("change", (e) => {
                 isDevSecondsMode = e.target.checked;
-                updateStopwatchUI();
+                updateStopwatchUI(quest);
             });
         }
         
@@ -127,7 +161,7 @@ export function loadActiveMissionInterface(container, quest, user) {
         document.getElementById("btnTimerStop").addEventListener("click", () => stopStopwatch(quest));
         document.getElementById("btnTimerFinalize").addEventListener("click", () => finalizeFocusMission(quest));
         
-        updateStopwatchUI();
+        updateStopwatchUI(quest);
         
     // C. MULTI MISSION QUEST RENDERING (Checklist checklist)
     } else if (quest.questType === "multi") {
@@ -146,6 +180,12 @@ export function loadActiveMissionInterface(container, quest, user) {
                 <div class="clear-level-preview">
                     <span class="font-bold">Progress Rate: <span id="multiProgressText" class="text-primary">0/0 Done</span></span>
                     <span id="multiClearTierBadge" class="badge badge-outline text-danger">MISSED</span>
+                </div>
+                
+                <div id="multiRewardPreview" class="reward-preview-box mt-xs" style="background-color: var(--accent-tint); border: 2px solid var(--border); border-radius: var(--border-radius-sm); padding: 8px; font-size: 0.85rem; font-weight: bold;">
+                    <span>Estimated Reward:</span>
+                    <span class="text-gold" style="margin-left: 5px;">🪙 <span id="multiGoldReward">0</span> Gold</span>
+                    <span class="text-primary" style="margin-left: 10px;">✨ <span id="multiXpReward">0</span> XP</span>
                 </div>
                 
                 <button id="btnFinalizeMulti" class="btn btn-primary full-width font-bold mt-md">
@@ -172,7 +212,7 @@ function startStopwatch(quest) {
     
     activeInterval = setInterval(() => {
         elapsedSeconds++;
-        updateStopwatchUI();
+        updateStopwatchUI(quest);
     }, 1000);
 }
 
@@ -194,7 +234,7 @@ function resumeStopwatch(quest) {
     
     activeInterval = setInterval(() => {
         elapsedSeconds++;
-        updateStopwatchUI();
+        updateStopwatchUI(quest);
     }, 1000);
 }
 
@@ -207,10 +247,10 @@ function stopStopwatch(quest) {
     document.getElementById("btnTimerStop").disabled = true;
     document.getElementById("btnTimerStart").disabled = false;
     
-    updateStopwatchUI();
+    updateStopwatchUI(quest);
 }
 
-function updateStopwatchUI() {
+function updateStopwatchUI(quest) {
     const display = document.getElementById("stopwatchDisplay");
     if (!display) return;
     
@@ -229,28 +269,16 @@ function updateStopwatchUI() {
     const tierBadge = document.getElementById("timerClearTierBadge");
     const finalizeBtn = document.getElementById("btnTimerFinalize");
     
-    let tier = "Missed";
+    const tier = determineFocusClearLevel(currentUnits, quest);
     
-    if (currentUnits >= focusPerfect) {
-        tier = "Perfect";
-        if (minPill) minPill.className = "timer-threshold-pill reached";
-        if (normalPill) normalPill.className = "timer-threshold-pill reached";
-        if (perfectPill) perfectPill.className = "timer-threshold-pill reached";
-    } else if (currentUnits >= focusNormal) {
-        tier = "Normal";
-        if (minPill) minPill.className = "timer-threshold-pill reached";
-        if (normalPill) normalPill.className = "timer-threshold-pill reached";
-        if (perfectPill) perfectPill.className = "timer-threshold-pill";
-    } else if (currentUnits >= focusMin) {
-        tier = "Minimum";
-        if (minPill) minPill.className = "timer-threshold-pill reached";
-        if (normalPill) normalPill.className = "timer-threshold-pill";
-        if (perfectPill) perfectPill.className = "timer-threshold-pill";
-    } else {
-        tier = "Missed";
-        if (minPill) minPill.className = "timer-threshold-pill";
-        if (normalPill) normalPill.className = "timer-threshold-pill";
-        if (perfectPill) perfectPill.className = "timer-threshold-pill";
+    if (minPill) {
+        minPill.className = currentUnits >= focusMin ? "timer-threshold-pill reached" : "timer-threshold-pill";
+    }
+    if (normalPill) {
+        normalPill.className = currentUnits >= focusNormal ? "timer-threshold-pill reached" : "timer-threshold-pill";
+    }
+    if (perfectPill) {
+        perfectPill.className = currentUnits >= focusPerfect ? "timer-threshold-pill reached" : "timer-threshold-pill";
     }
     
     if (tierBadge) {
@@ -259,20 +287,32 @@ function updateStopwatchUI() {
             tierBadge.innerText = "NOT ELIGIBLE";
             if (finalizeBtn) finalizeBtn.disabled = true;
         } else {
-            tierBadge.className = `badge badge-${tier.toLowerCase()}`;
+            tierBadge.className = `badge badge-${tier.replace(/\s+/g, '-').toLowerCase()}`;
             tierBadge.innerText = `${tier} Clear`;
             if (finalizeBtn) finalizeBtn.disabled = false;
+        }
+    }
+    
+    // Update dynamic live reward preview
+    const rewardBox = document.getElementById("focusRewardPreview");
+    const goldSpan = document.getElementById("focusGoldReward");
+    const xpSpan = document.getElementById("focusXpReward");
+    
+    if (rewardBox && goldSpan && xpSpan) {
+        if (tier === "Missed") {
+            rewardBox.classList.add("hidden");
+        } else {
+            rewardBox.classList.remove("hidden");
+            const reward = calculateReward(quest.difficultyLevel, tier);
+            goldSpan.innerText = reward.goldEarned;
+            xpSpan.innerText = reward.xpEarned;
         }
     }
 }
 
 function finalizeFocusMission(quest) {
     const elapsedMinutes = isDevSecondsMode ? elapsedSeconds : Math.floor(elapsedSeconds / 60);
-    let clearTier = "Missed";
-    
-    if (elapsedMinutes >= focusPerfect) clearTier = "Perfect";
-    else if (elapsedMinutes >= focusNormal) clearTier = "Normal";
-    else if (elapsedMinutes >= focusMin) clearTier = "Minimum";
+    const clearTier = determineFocusClearLevel(elapsedMinutes, quest);
     
     if (clearTier === "Missed") {
         alert("Cannot finalize: minimum time is not met.");
@@ -324,28 +364,29 @@ function updateMultiProgressUI(quest) {
     
     if (progressText) progressText.innerText = `${done}/${total} Checked (${Math.round(rate)}%)`;
     
-    let tier = "Missed";
-    if (rate >= 100) tier = "Perfect";
-    else if (rate >= 70) tier = "Normal";
-    else if (rate === 0) tier = "Missed";
-    else if (rate >= 50) tier = "Minimum";
-    else tier = "Missed";
+    const tier = determineMultiClearLevel(done, total);
     
     if (tierBadge) {
-        tierBadge.className = `badge badge-${tier.toLowerCase()}`;
+        tierBadge.className = `badge badge-${tier.replace(/\s+/g, '-').toLowerCase()}`;
         tierBadge.innerText = `${tier} Clear`;
+    }
+    
+    // Update dynamic live reward preview
+    const rewardBox = document.getElementById("multiRewardPreview");
+    const goldSpan = document.getElementById("multiGoldReward");
+    const xpSpan = document.getElementById("multiXpReward");
+    
+    if (rewardBox && goldSpan && xpSpan) {
+        const reward = calculateReward(quest.difficultyLevel, tier);
+        goldSpan.innerText = reward.goldEarned;
+        xpSpan.innerText = reward.xpEarned;
     }
 }
 
 function finalizeMultiMission(quest) {
     const total = quest.dailyTargets.length;
     const done = Object.values(multiMissionTargets).filter(t => t.done).length;
-    const rate = total > 0 ? (done / total) * 100 : 0;
-    
-    let clearTier = "Missed";
-    if (rate >= 100) clearTier = "Perfect";
-    else if (rate >= 70) clearTier = "Normal";
-    else if (rate >= 50) clearTier = "Minimum";
+    const clearTier = determineMultiClearLevel(done, total);
     
     if (clearTier === "Missed") {
         const confirmMiss = confirm("You have completed less than 50% of your checklist. Finalizing will log this mission as Missed. Do you want to continue?");
@@ -371,20 +412,26 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
     
     try {
         // Calculate Rewards XP and Gold using Systems module
-        const reward = calculateRewards(quest.difficultyLevel, clearLevel);
+        const reward = calculateReward(quest.difficultyLevel, clearLevel);
         
         // Load latest user profile stats to compute leveling
         const userSnap = await getDocument("users", userId);
         const user = userSnap.data();
         
-        let newXp = (user.xp || 0) + reward.xp;
-        let newLevel = calculateLevel(newXp);
+        // Ensure Missed clear level awards exactly 0 XP and 0 Gold
+        if (clearLevel === "Missed") {
+            reward.xpEarned = 0;
+            reward.goldEarned = 0;
+        }
+        
+        let newXp = (user.xp || 0) + reward.xpEarned;
+        let newLevel = Math.floor(newXp / 100) + 1;
         let levelInc = Math.max(0, newLevel - (user.level || 1));
         
         // Handle Streak Shield Mechanics
         let shieldDeduct = false;
         let finalChain = quest.currentChain || 0;
-        let clearStatus = clearLevel;
+        let clearStatus = reward.clearLevel;
         
         if (clearLevel === "Missed") {
             const hasShield = (user.inventory?.streakShield || 0) > 0;
@@ -392,8 +439,8 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
                 // Streak Shield deducts, preserve chain
                 shieldDeduct = true;
                 clearStatus = "Shielded Missed";
-                reward.xp = 0;
-                reward.gold = 0;
+                reward.xpEarned = 0;
+                reward.goldEarned = 0;
                 levelInc = 0;
                 console.log("Streak Shield utilized! Preserving chain.");
             } else {
@@ -448,8 +495,8 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
             finishedAt: new Date().toISOString(),
             targets: targetsObj,
             failureReason: failureReason,
-            goldEarned: reward.gold,
-            xpEarned: reward.xp
+            goldEarned: reward.goldEarned,
+            xpEarned: reward.xpEarned
         };
         
         // Trigger Transaction Database Write
@@ -457,10 +504,8 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
             missionId,
             userId,
             quest.questId,
-            reward.gold,
-            reward.xp,
-            levelInc,
-            clearLevel !== "Missed",
+            reward.goldEarned,
+            reward.xpEarned,
             shieldDeduct,
             updatedQuestStats,
             newMissionData
@@ -470,8 +515,8 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
         await loadUserQuestsAndTodayLogs();
         
         let toastMsg = `Mission Logged! ${clearStatus} Clear.`;
-        if (reward.xp > 0 || reward.gold > 0) {
-            toastMsg += ` +${reward.xp} XP, +${reward.gold} Gold!`;
+        if (reward.xpEarned > 0 || reward.goldEarned > 0) {
+            toastMsg += ` +${reward.xpEarned} XP, +${reward.goldEarned} Gold!`;
         }
         if (levelInc > 0) {
             toastMsg += " LEVEL UP! 🎉";

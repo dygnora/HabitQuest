@@ -106,40 +106,90 @@ export function calculateDifficulty(questType, challengeDays, frequencyPerWeek, 
     };
 }
 
-// 3. REWARD ENGINE
-// Reward = Base Reward * Difficulty Multiplier * Clear Level Multiplier
-// Base Gold/XP = 10
-export function calculateRewards(difficultyLevel, clearLevel) {
-    const baseGold = 10;
-    const baseXp = 10;
+// 3. REWARD & PROGRESSION UTILITIES
+export function getLocalTodayString() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+export function normalizeDifficultyLevel(level) {
+    const value = String(level || "").toLowerCase().trim();
+    if (value === "easy") return "Easy";
+    if (value === "medium") return "Medium";
+    if (value === "hard") return "Hard";
+    if (value === "extreme") return "Extreme";
+    return "Easy";
+}
+
+export function normalizeClearLevel(level) {
+    const value = String(level || "")
+        .toLowerCase()
+        .replace(/[_-]/g, " ")
+        .trim();
+    if (value === "minimum") return "Minimum";
+    if (value === "normal") return "Normal";
+    if (value === "perfect") return "Perfect";
+    if (value === "missed") return "Missed";
+    if (value === "shielded missed") return "Shielded Missed";
+    return "Missed";
+}
+
+export function determineFocusClearLevel(completedMinutes, quest) {
+    const min = quest.minimumMinutes ?? 10;
+    const normal = quest.normalMinutes ?? 30;
+    const perfect = quest.perfectMinutes ?? 60;
+    if (completedMinutes < min) return "Missed";
+    if (completedMinutes >= perfect) return "Perfect";
+    if (completedMinutes >= normal) return "Normal";
+    return "Minimum";
+}
+
+export function determineMultiClearLevel(doneCount, totalCount) {
+    if (!totalCount || totalCount <= 0) return "Missed";
+    const ratio = doneCount / totalCount;
+    if (ratio >= 1.0) return "Perfect";
+    if (ratio >= 0.7) return "Normal";
+    if (ratio >= 0.5) return "Minimum";
+    return "Missed";
+}
+
+export function calculateReward(difficultyLevel, clearLevel) {
+    const BASE_XP = 10;
+    const BASE_GOLD = 10;
     
-    // Difficulty Multiplier
-    // Easy = 1, Medium = 1.3, Hard = 1.6, Extreme = 2
-    let diffMultiplier = 1.0;
-    if (difficultyLevel === "Easy") diffMultiplier = 1.0;
-    else if (difficultyLevel === "Medium") diffMultiplier = 1.3;
-    else if (difficultyLevel === "Hard") diffMultiplier = 1.6;
-    else if (difficultyLevel === "Extreme") diffMultiplier = 2.0;
+    const difficultyMultiplier = {
+        Easy: 1,
+        Medium: 1.3,
+        Hard: 1.6,
+        Extreme: 2
+    };
     
-    // Clear Level Multiplier
-    // Minimum = 0.5, Normal = 1.0, Perfect = 1.5, Missed = 0
-    let clearMultiplier = 1.0;
-    if (clearLevel === "Minimum") clearMultiplier = 0.5;
-    else if (clearLevel === "Normal") clearMultiplier = 1.0;
-    else if (clearLevel === "Perfect") clearMultiplier = 1.5;
-    else if (clearLevel === "Missed" || clearLevel === "Shielded Missed") clearMultiplier = 0.0;
+    const clearMultiplier = {
+        Minimum: 0.5,
+        Normal: 1,
+        Perfect: 1.5,
+        Missed: 0,
+        "Shielded Missed": 0
+    };
     
-    const goldEarned = Math.round(baseGold * diffMultiplier * clearMultiplier);
-    const xpEarned = Math.round(baseXp * diffMultiplier * clearMultiplier);
+    const normalizedDifficulty = normalizeDifficultyLevel(difficultyLevel);
+    const normalizedClear = normalizeClearLevel(clearLevel);
+    
+    const diffMulti = difficultyMultiplier[normalizedDifficulty] ?? 1;
+    const clearMulti = clearMultiplier[normalizedClear] ?? 0;
     
     return {
-        gold: goldEarned,
-        xp: xpEarned
+        xpEarned: Math.floor(BASE_XP * diffMulti * clearMulti),
+        goldEarned: Math.floor(BASE_GOLD * diffMulti * clearMulti),
+        difficultyLevel: normalizedDifficulty,
+        clearLevel: normalizedClear
     };
 }
 
 // 4. LEVEL ENGINE
-// Level = Math.floor(xp / 100) + 1
 export function calculateLevel(xp) {
     const totalXp = parseInt(xp) || 0;
     return Math.floor(totalXp / 100) + 1;

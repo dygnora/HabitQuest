@@ -1138,3 +1138,169 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     padding: 6px 0;
 }
+
+/* ==========================================================================
+   17. Quest Form & Assessment Previews
+   ========================================================================== */
+.preview-metrics {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.metric-block {
+    flex: 1 1 140px;
+    background-color: var(--accent-tint);
+    border: 2px solid var(--border);
+    border-radius: var(--border-radius-md);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.metric-block .metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.metric-block .metric-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
+.metric-block.reward-preview {
+    flex: 1 1 180px;
+}
+
+/* ==========================================================================
+   18. Mobile Responsiveness System & Overrides
+   ========================================================================== */
+
+/* Universal smaller spacing and margins on mobile devices */
+@media (max-width: 650px) {
+    .app-header {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 16px;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .header-nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .nav-link {
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
+    
+    .header-logo {
+        justify-content: center;
+    }
+    
+    .app-container {
+        padding: 16px 12px;
+    }
+    
+    .card {
+        padding: 16px;
+    }
+    
+    /* Quest cards optimization */
+    .quest-card {
+        padding: 16px;
+    }
+    
+    .quest-card-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .quest-stats-bar {
+        justify-content: flex-start;
+        border-top: 1px dashed var(--border);
+        padding-top: 10px;
+    }
+    
+    /* Timer stopwatch view layout improvements */
+    .focus-quest-control .grid-4col {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px !important;
+    }
+    
+    .focus-quest-control .btn-sm {
+        padding: 8px 4px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* Timer Display downscaling */
+    .timer-display {
+        font-size: 2.4rem;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Profiles & Stat Box scaling */
+    .stats-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .stat-box {
+        padding: 8px 12px;
+    }
+    
+    /* Campaign reward matrix squeezing prevention */
+    .detail-metric {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .detail-metric .flex {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    /* Inventory lists scaling */
+    .inventory-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .inventory-item .btn {
+        width: 100%;
+    }
+    
+    /* Form sections */
+    .grid-2col, .grid-3col {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    
+    /* Auth layouts */
+    .auth-container {
+        margin: 4vh auto;
+    }
+    
+    .logo-title {
+        font-size: 2.2rem;
+    }
+    
+    .logo-emoji {
+        font-size: 3rem;
+    }
+}

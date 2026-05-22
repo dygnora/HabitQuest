@@ -30,47 +30,105 @@
 
     <!-- 2. Auth View -->
     <section id="authView" class="view">
-        <div class="auth-container">
-            <div class="logo-area">
-                <span class="logo-emoji">⚔️</span>
-                <h1 class="logo-title">HabitQuest</h1>
-                <p class="logo-tagline">Turn daily routines into structured quests. Level up your discipline.</p>
+        <div class="landing-shell">
+            <!-- 1. Top Logo & Brand Bar -->
+            <div class="landing-topbar">
+                <div class="brand-lockup">
+                    <span class="logo-emoji">⚔️</span>
+                    <div>
+                        <h1 class="logo-title">HabitQuest</h1>
+                        <p class="logo-tagline">Gamified adaptive quest board</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid-2col">
-                <!-- User Sign In Card -->
-                <div class="card neo-card">
-                    <h2 class="section-title">Adventurer Login</h2>
-                    <p class="card-desc">Embark on your personal growth quest board, track Streaks, and earn Gold.</p>
+            <!-- 2. Hero and Standings Leaderboard Grid -->
+            <div class="landing-hero-grid">
+                <!-- Left: Hero Copy & Primary Login -->
+                <div class="hero-copy card neo-card">
+                    <span class="eyebrow">Discipline, but built like a quest.</span>
+                    <h2 class="hero-title">Turn daily habits into quests you actually want to finish.</h2>
+                    <p class="hero-subtitle">
+                        Build routines, complete daily missions, earn XP and Gold, protect streaks, and climb the standings through consistency.
+                    </p>
+
+                    <div class="hero-benefit-grid">
+                        <div class="benefit-chip">⚔️ Daily Quests</div>
+                        <div class="benefit-chip">✨ XP Progression</div>
+                        <div class="benefit-chip">🪙 Gold Rewards</div>
+                        <div class="benefit-chip">🏆 Public Standings</div>
+                    </div>
+
                     <button id="googleLoginBtn" class="btn btn-primary full-width font-bold">
                         <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
                             <path fill="currentColor" d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1 6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.985 0-.74-.078-1.302-.176-1.86H12.24z"/>
                         </svg>
                         Continue with Google
                     </button>
-                    <p class="mode-notice text-center" id="authModeNotice"></p>
+
+                    <p class="small-trust-copy">
+                        Start as an Adventurer. Your dashboard unlocks after Google sign-in.
+                    </p>
                 </div>
 
-                <!-- Admin Sign In Card -->
-                <div class="card neo-card">
-                    <h2 class="section-title">Guild Master Panel Login</h2>
-                    <p class="card-desc">For system administrators to monitor aggregates, consistency, and metrics.</p>
-                    <form id="adminLoginForm">
-                        <div class="form-group">
-                            <label for="adminEmail" class="font-bold">Guild Master Email</label>
-                            <input type="email" id="adminEmail" placeholder="admin@habitquest.com" required class="form-control">
+                <!-- Right: Standings (Social Proof) -->
+                <aside class="leaderboard-card card neo-card">
+                    <div class="leaderboard-header">
+                        <div>
+                            <h2 class="section-title">🏆 Public Adventurer Standings</h2>
+                            <p class="card-desc">Top adventurers ranked by consistency.</p>
                         </div>
-                        <div class="form-group">
-                            <label for="adminPassword" class="font-bold">Password</label>
-                            <input type="password" id="adminPassword" placeholder="••••••••" required class="form-control">
-                        </div>
-                        <button type="submit" id="adminLoginBtn" class="btn btn-dark full-width font-bold">
-                            Login as Guild Master
-                        </button>
-                    </form>
-                    <p id="adminErrorMsg" class="text-danger font-bold text-center mt-sm hidden"></p>
+                    </div>
+
+                    <div id="publicLeaderboardContainer"></div>
+                </aside>
+            </div>
+
+            <!-- 3. Mini Features & Value Proposition Cards -->
+            <div class="landing-feature-strip">
+                <div class="card neo-card mini-feature-card">
+                    <span class="feature-emoji">📅</span>
+                    <h3>Daily Missions</h3>
+                    <p>Form solid routines with adaptive durations. Track study, fitness, mind, or work quests.</p>
+                </div>
+                <div class="card neo-card mini-feature-card">
+                    <span class="feature-emoji">🛡️</span>
+                    <h3>Streak Protection</h3>
+                    <p>Consistency drops if you miss missions. Buy Streak Shields from the shop to guard your progress.</p>
+                </div>
+                <div class="card neo-card mini-feature-card">
+                    <span class="feature-emoji">🏪</span>
+                    <h3>RPG Quest Shop</h3>
+                    <p>Spend gold on cool titles and custom themes (like Midnight or Forest) to personalize your board.</p>
                 </div>
             </div>
+
+            <!-- 4. Secondary Admin Login Card (Guild Master Access) -->
+            <div class="admin-access-card card neo-card">
+                <div class="admin-access-copy">
+                    <h2 class="section-title">Guild Master Access</h2>
+                    <p class="card-desc">Restricted access for system monitoring and aggregate consistency metrics.</p>
+                </div>
+
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminEmail" class="font-bold">Guild Master Email</label>
+                        <input type="email" id="adminEmail" placeholder="admin@habitquest.com" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword" class="font-bold">Password</label>
+                        <input type="password" id="adminPassword" placeholder="••••••••" required class="form-control">
+                    </div>
+                    <button type="submit" id="adminLoginBtn" class="btn btn-dark full-width font-bold">
+                        Login as Guild Master
+                    </button>
+                </form>
+
+                <p id="adminErrorMsg" class="text-danger font-bold text-center mt-sm hidden"></p>
+            </div>
+
+            <!-- 5. Status / Mode Footer Note -->
+            <p class="mode-notice text-center" id="authModeNotice"></p>
         </div>
     </section>
 
@@ -134,6 +192,37 @@
                         </button>
                     </div>
 
+                    <!-- Search & Filter Controls -->
+                    <div class="card neo-card filter-card mt-sm mb-md">
+                        <div class="grid-3col gap-sm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                            <div class="form-group mb-0" style="margin-bottom: 0;">
+                                <label for="trackerSearchInput" class="font-bold text-xs" style="display: block; margin-bottom: 4px;">Search Quest</label>
+                                <input type="text" id="trackerSearchInput" placeholder="Search title or category..." class="form-control form-control-sm" style="padding: 6px 12px; font-size: 0.9rem;">
+                            </div>
+                            <div class="form-group mb-0" style="margin-bottom: 0;">
+                                <label for="trackerStatusFilter" class="font-bold text-xs" style="display: block; margin-bottom: 4px;">Status</label>
+                                <select id="trackerStatusFilter" class="form-control form-control-sm" style="padding: 6px 12px; font-size: 0.9rem; width: 100%; height: auto;">
+                                    <option value="all">All Statuses</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Paused">Paused</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Archived">Archived</option>
+                                    <option value="Abandoned">Abandoned</option>
+                                </select>
+                            </div>
+                            <div class="form-group mb-0" style="margin-bottom: 0;">
+                                <label for="trackerDifficultyFilter" class="font-bold text-xs" style="display: block; margin-bottom: 4px;">Difficulty</label>
+                                <select id="trackerDifficultyFilter" class="form-control form-control-sm" style="padding: 6px 12px; font-size: 0.9rem; width: 100%; height: auto;">
+                                    <option value="all">All Difficulties</option>
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Hard">Hard</option>
+                                    <option value="Extreme">Extreme</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Quests Container -->
                     <div id="activeQuestsContainer" class="quests-list">
                         <!-- Active quest cards will be dynamically loaded here -->
@@ -143,6 +232,9 @@
                             <p>Create a Quest based on a habit you want to build to start earning XP and Gold.</p>
                         </div>
                     </div>
+
+                    <!-- Pagination Controls -->
+                    <div id="trackerPaginationContainer" class="flex justify-between align-center mt-md" style="margin-top: 16px;"></div>
 
                     <!-- Completed / Archived Quests Drawer -->
                     <div class="drawer-section mt-lg">
@@ -575,8 +667,7 @@
             </div>
         </div>
     </section>
-
-    <!-- 8. Guild Master Panel (Admin View) -->
+            <!-- 8. Guild Master Panel (Admin View) -->
     <section id="adminView" class="view hidden">
         <header class="app-header">
             <div class="header-logo">
@@ -586,78 +677,189 @@
             <button id="adminLogoutBtn" class="btn btn-sm btn-outline font-bold">Logout</button>
         </header>
 
-        <div class="app-container">
-            <!-- Top Dashboard Stats -->
-            <div class="grid-4col">
-                <div class="card neo-card stat-metric-card">
-                    <span class="metric-label">Total Users</span>
-                    <span id="adminTotalUsers" class="metric-large">0</span>
-                </div>
-                <div class="card neo-card stat-metric-card">
-                    <span class="metric-label">Active Quests / Total</span>
-                    <span class="metric-large">
-                        <span id="adminActiveQuests" class="text-primary">0</span><span class="slash">/</span><span id="adminTotalQuests">0</span>
-                    </span>
-                </div>
-                <div class="card neo-card stat-metric-card">
-                    <span class="metric-label">Completed Quests</span>
-                    <span id="adminCompletedQuests" class="metric-large text-success">0</span>
-                </div>
-                <div class="card neo-card stat-metric-card">
-                    <span class="metric-label">Missions Today</span>
-                    <span id="adminMissionsToday" class="metric-large text-gold">0</span>
+        <div class="app-container admin-command-center">
+            
+            <!-- Command Center Hero Section -->
+            <div class="admin-command-hero card neo-card mb-md">
+                <div class="flex justify-between align-center flex-wrap gap-md">
+                    <div class="admin-command-copy">
+                        <h2 class="section-title">👑 Guild Master Command Center</h2>
+                        <p class="card-desc">Monitor adventurer consistency, mission failures, and quest health.</p>
+                    </div>
+                    <div class="admin-toolbar flex align-center gap-sm flex-wrap">
+                        <div class="form-group mb-0" style="margin-bottom: 0;">
+                            <select id="adminPeriodFilter" class="form-control form-control-sm" style="padding: 6px 12px; font-size: 0.9rem; font-weight: bold; width: 140px; height: auto;">
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d">Last 30 Days</option>
+                            </select>
+                        </div>
+                        <button id="adminRefreshBtn" class="btn btn-sm btn-primary font-bold btn-icon">
+                            🔄 Refresh
+                        </button>
+                        <span id="adminLastUpdated" class="mini-desc font-bold secondary-text" style="white-space: nowrap;">Last updated: -</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid-2col mt-lg">
-                <!-- Failure Analysis Panel -->
-                <div class="card neo-card admin-details-card">
-                    <h3 class="admin-card-title">⚠️ System Failure Reason Log</h3>
-                    <p class="secondary-text">Aggregation of reasons logged when adventurers checked in as "Missed".</p>
-                    
-                    <div id="adminFailureReasonDistribution" class="failure-distribution-list mt-md">
-                        <!-- Aggregates parsed by admin.js -->
-                        <p class="secondary-text italic">Loading metrics...</p>
+            <!-- Error Banner -->
+            <div id="adminDashboardError" class="card neo-card error-card mb-md hidden"></div>
+
+            <!-- Top KPI Cards Grid -->
+            <div class="admin-kpi-grid mb-md">
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Total Adventurers</span>
+                    <span id="adminTotalUsers" class="metric-large font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Active Quests</span>
+                    <span id="adminActiveQuests" class="metric-large text-primary font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Total Quests</span>
+                    <span id="adminTotalQuests" class="metric-large font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Completed Quests</span>
+                    <span id="adminCompletedQuests" class="metric-large text-success font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Missions (Period)</span>
+                    <span id="adminMissionsToday" class="metric-large text-gold font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Average Completion</span>
+                    <span id="adminAvgCompletionRate" class="metric-large text-primary font-bold">0%</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">Logged Failures</span>
+                    <span id="adminLoggedFailures" class="metric-large text-danger font-bold">0</span>
+                </div>
+                <div class="card neo-card admin-kpi-card">
+                    <span class="metric-label">At-Risk Quests</span>
+                    <span id="adminAtRiskQuests" class="metric-large text-gold font-bold">0</span>
+                </div>
+            </div>
+
+            <!-- Main Layout Grid -->
+            <div class="admin-main-grid mt-lg">
+                <!-- Left Stack (65% width on desktop) -->
+                <div class="admin-left-stack">
+                    <!-- Executive Insights Panel -->
+                    <div id="adminExecutiveInsight" class="card neo-card bg-gold-tint mb-md" style="border-color: var(--primary);">
+                        <p class="secondary-text italic text-center">Loading Executive Insights...</p>
                     </div>
 
-                    <!-- AI-Like Rule-Based Recommendation Card -->
-                    <div class="card neo-card rule-insight-card mt-lg">
-                        <h4 class="insight-title">💡 Guild Master Insight Analysis</h4>
-                        <p id="adminInsightSuggestion" class="insight-text italic">Analyzing aggregates to compile recommendations...</p>
+                    <!-- Failure Analytics Card -->
+                    <div class="card neo-card admin-panel-card mb-md">
+                        <div class="flex justify-between align-center border-bottom pb-sm mb-sm" style="border-bottom: 2px dashed var(--border); padding-bottom: 8px; margin-bottom: 12px;">
+                            <h3 class="admin-card-title">⚠️ System Failure Reason Log</h3>
+                            <span class="badge badge-outline">Total Logs: <span id="adminFailureTotal">0</span></span>
+                        </div>
+                        <p class="secondary-text mb-md">Aggregation of reasons logged when adventurers checked in as "Missed".</p>
+                        
+                        <div id="adminFailureReasonDistribution" class="failure-distribution-list mt-md">
+                            <p class="secondary-text italic">Loading failures...</p>
+                        </div>
+
+                        <!-- Recommendations Card inside Failure Section -->
+                        <div class="card neo-card rule-insight-card mt-lg" style="background-color: var(--accent-tint); border: 2px solid var(--border); margin-top: 20px;">
+                            <h4 class="insight-title" style="color: var(--primary); font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.95rem; margin-bottom: 6px;">💡 Guild Master Insight Recommendation</h4>
+                            <p id="adminInsightSuggestion" class="insight-text italic">Analyzing aggregates to compile recommendations...</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Mission Activity Card -->
+                    <div class="card neo-card admin-panel-card">
+                        <h3 class="admin-card-title border-bottom pb-sm" style="border-bottom: 2px dashed var(--border); padding-bottom: 8px; margin-bottom: 12px;">🕒 Recent Mission Activity</h3>
+                        <p class="secondary-text mb-md">Real-time log of the latest adventure check-ins completed in the guild.</p>
+                        
+                        <div class="admin-table-scroll">
+                            <table class="neo-table recent-activity-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Adventurer</th>
+                                        <th>Quest</th>
+                                        <th>Clear Level</th>
+                                        <th>Reward</th>
+                                        <th>Failure Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminRecentActivityBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center secondary-text italic">Loading recent activities...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Consistency Leaderboard -->
-                <div class="card neo-card admin-details-card">
-                    <h3 class="admin-card-title">🏆 Adventurer Consistency Standings</h3>
-                    <p class="secondary-text">Ranking users based on total successful days registered in campaigns.</p>
-
-                    <div class="leaderboard-table-container mt-md">
-                        <table class="neo-table">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Adventurer Name</th>
-                                    <th>Level</th>
-                                    <th>Successful Days</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminLeaderboardBody">
-                                <!-- Loaded dynamically via admin.js -->
-                                <tr>
-                                    <td colspan="4" class="text-center secondary-text italic">Loading standings...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Aggregates Section -->
-                    <div class="metric-list-horizontal mt-lg border-top pt-md">
-                        <div>
-                            <span class="metric-label">Average Campaign Completion Rate</span>
-                            <span id="adminAvgCompletionRate" class="font-bold text-lg text-primary block mt-xs">0%</span>
+                <!-- Right Stack (35% width on desktop) -->
+                <div class="admin-right-stack">
+                    <!-- Quest Status Breakdown Card -->
+                    <div class="card neo-card admin-panel-card mb-md">
+                        <h3 class="admin-card-title border-bottom pb-sm" style="border-bottom: 2px dashed var(--border); padding-bottom: 8px; margin-bottom: 12px;">📊 Quest Status Breakdown</h3>
+                        <p class="secondary-text mb-md">All-time campaigns tracking status distribution.</p>
+                        <div id="adminQuestStatusBreakdown">
+                            <p class="secondary-text italic">Loading breakdown...</p>
                         </div>
                     </div>
+
+                    <!-- Standing Leaderboard Card -->
+                    <div class="card neo-card admin-panel-card">
+                        <h3 class="admin-card-title border-bottom pb-sm" style="border-bottom: 2px dashed var(--border); padding-bottom: 8px; margin-bottom: 12px;">🏆 Top Adventurer Standings</h3>
+                        <p class="secondary-text mb-md">Ranked by consistency (sum of successful days across campaigns).</p>
+
+                        <div class="admin-table-scroll">
+                            <table class="neo-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Adventurer</th>
+                                        <th>Level</th>
+                                        <th>XP</th>
+                                        <th>Successful Days</th>
+                                        <th>Active Quests</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminLeaderboardBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center secondary-text italic">Loading standings...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adventurer Health Table Card -->
+            <div class="admin-table-section card neo-card mt-lg">
+                <h3 class="admin-card-title border-bottom pb-sm" style="border-bottom: 2px dashed var(--border); padding-bottom: 8px; margin-bottom: 12px;">🩺 Adventurer Health & Engagement Monitor</h3>
+                <p class="secondary-text mb-md">Overview of individual consistent streaks, missed targets, and overall health status.</p>
+                
+                <div class="admin-table-scroll">
+                    <table class="neo-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>Adventurer</th>
+                                <th>Level</th>
+                                <th>Active Quests</th>
+                                <th>Successful Days</th>
+                                <th>Missed Days</th>
+                                <th>Completion Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUserHealthBody">
+                            <tr>
+                                <td colspan="7" class="text-center secondary-text italic">Loading health logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

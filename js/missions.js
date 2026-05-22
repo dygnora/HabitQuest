@@ -13,6 +13,8 @@ import {
     getLocalTodayString 
 } from "./systems.js";
 import { loadUserQuestsAndTodayLogs } from "./quests.js";
+import { syncPublicProfile } from "./leaderboard.js";
+
 
 // Session execution variables
 let activeInterval = null;
@@ -540,6 +542,9 @@ export async function finalizeMissionProcess(quest, clearLevel, completedMinVal,
             updatedQuestStats,
             newMissionData
         );
+        
+        // Synchronize public profile stats to Firestore/Local Storage publicProfiles
+        await syncPublicProfile(userId);
         
         // Reload global states and display success alert Toast
         await loadUserQuestsAndTodayLogs();

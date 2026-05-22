@@ -20,7 +20,8 @@ import {
     todayMissions,
     pauseQuestCampaign,
     archiveQuestCampaign,
-    deleteQuestCampaign
+    deleteQuestCampaign,
+    trackerState
 } from "./quests.js";
 import { 
     loadActiveMissionInterface, 
@@ -28,6 +29,7 @@ import {
 } from "./missions.js";
 import { calculateDifficulty, calculateLevel, SHOP_ITEMS, calculateReward } from "./systems.js";
 import { loadAndRenderAdminPanel } from "./admin.js";
+import { renderPublicLeaderboard, syncPublicProfile } from "./leaderboard.js";
 
 // Active Global State Variables
 let currentActiveView = "authView";
@@ -60,6 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setupAuthListeners();
     setupFormListeners();
     setupDetailActionListeners();
+    setupDashboardFilters();
+    
+    // Render public standings immediately on load
+    renderPublicLeaderboard();
     
     // Core callback connection when missions are finalized successfully
     registerMissionLoggedCallback(() => {
@@ -149,6 +155,8 @@ function setupAuthListeners() {
                 adminForm.reset();
                 document.getElementById("adminLoginBtn").disabled = false;
             }
+            // Render the public leaderboard when not authenticated
+            renderPublicLeaderboard();
         }
     });
 }
@@ -242,6 +250,11 @@ async function refreshAppStatesAndDashboard() {
     
     // Apply theme
     applyVisualTheme(profile.activeTheme || "default");
+    
+    // Sync public profile stats to Firestore/Local Storage publicProfiles
+    if (profile.role === "user") {
+        syncPublicProfile(currentUserProfile.uid);
+    }
     
     // Render quest list board
     renderQuestBoard(openQuestDetailView);
@@ -377,6 +390,16 @@ function setupFormListeners() {
             }
             
             try {
+                // Soft warning when user creates more than 5 active/paused trackers
+                const activeTrackerCount = userQuests.filter(q => q.status === "Active" || q.status === "Paused").length;
+                if (activeTrackerCount >= 5) {
+                    const confirmProceed = confirm("You already have 5 active trackers. Managing too many habits at once can reduce consistency and make progress harder to sustain. Do you still want to create another tracker?");
+                    if (!confirmProceed) {
+                        submitBtn.disabled = false;
+                        return;
+                    }
+                }
+
                 const success = await createQuest(title, reason, category, type, challengeDays, frequency, extraParams);
                 if (success) {
                     renderDashboardTab();
@@ -833,5 +856,36 @@ async function applyTheme(themeClass) {
     } catch (err) {
         console.error("Applying theme failed:", err);
         alert("Firestore Update Failed: Unable to apply theme.");
+    }
+}
+
+// 11. SEARCH AND FILTER ON USER QUEST BOARD
+function setupDashboardFilters() {
+    const searchInput = document.getElementById("trackerSearchInput");
+    const statusSelect = document.getElementById("trackerStatusFilter");
+    const diffSelect = document.getElementById("trackerDifficultyFilter");
+    
+    if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            trackerState.searchKeyword = e.target.value;
+            trackerState.currentPage = 1;
+            renderQuestBoard(openQuestDetailView);
+        });
+    }
+    
+    if (statusSelect) {
+        statusSelect.addEventListener("change", (e) => {
+            trackerState.statusFilter = e.target.value;
+            trackerState.currentPage = 1;
+            renderQuestBoard(openQuestDetailView);
+        });
+    }
+    
+    if (diffSelect) {
+        diffSelect.addEventListener("change", (e) => {
+            trackerState.difficultyFilter = e.target.value;
+            trackerState.currentPage = 1;
+            renderQuestBoard(openQuestDetailView);
+        });
     }
 }

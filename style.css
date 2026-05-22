@@ -1304,3 +1304,450 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 3rem;
     }
 }
+
+/* ==========================================================================
+   19. Redesigned Landing Page / Auth View
+   ========================================================================== */
+
+.landing-shell {
+    width: 100%;
+    max-width: 1200px;
+    margin: 4vh auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.landing-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: var(--border-width) solid var(--border);
+    padding-bottom: 20px;
+}
+
+.brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-lockup .logo-emoji {
+    font-size: 2.8rem;
+    line-height: 1;
+}
+
+.brand-lockup .logo-title {
+    font-size: 2.2rem;
+    line-height: 1.1;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+}
+
+.brand-lockup .logo-tagline {
+    font-size: 0.95rem;
+    opacity: 0.8;
+}
+
+.landing-hero-grid {
+    display: grid;
+    grid-template-columns: 58% 38%;
+    gap: 4%;
+    align-items: start;
+}
+
+.hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 40px;
+}
+
+.hero-copy .eyebrow {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: var(--primary-text);
+    background-color: var(--primary);
+    border: var(--border-width) solid var(--border);
+    padding: 6px 14px;
+    border-radius: var(--border-radius-sm);
+    align-self: flex-start;
+    box-shadow: 2px 2px 0 var(--border);
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    line-height: 1.15;
+    margin: 0;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.85;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.hero-benefit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.benefit-chip {
+    background-color: var(--accent-tint);
+    border: 2px solid var(--border);
+    border-radius: var(--border-radius-md);
+    padding: 10px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.benefit-chip:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--border);
+}
+
+.small-trust-copy {
+    font-size: 0.8rem;
+    opacity: 0.75;
+    text-align: center;
+    margin-top: -8px;
+}
+
+.leaderboard-card {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboard-header {
+    margin-bottom: 12px;
+    border-bottom: 2px dashed var(--border);
+    padding-bottom: 12px;
+}
+
+/* Feature strip below hero */
+.landing-feature-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.mini-feature-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: var(--card);
+}
+
+.mini-feature-card .feature-emoji {
+    font-size: 2rem;
+    align-self: flex-start;
+    background-color: var(--accent-tint);
+    border: 2px solid var(--border);
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mini-feature-card h3 {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.mini-feature-card p {
+    font-size: 0.9rem;
+    opacity: 0.85;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Secondary Admin Access Card */
+.admin-access-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 32px;
+    background-color: var(--card);
+    border-color: var(--border);
+}
+
+.admin-access-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-access-copy .section-title {
+    font-size: 1.4rem;
+}
+
+.admin-access-copy .card-desc {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.admin-access-card form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.admin-access-card form .form-group {
+    margin-bottom: 0;
+}
+
+.admin-access-card form .form-control {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+}
+
+.admin-access-card form .btn {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    align-self: flex-end;
+    height: 46px; /* Matches input height + border spacing */
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 992px) {
+    .landing-hero-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .admin-access-card form {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .admin-access-card form .btn {
+        grid-column: span 2;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .landing-feature-strip {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .hero-copy {
+        padding: 24px;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .hero-benefit-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .admin-access-card form {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-access-card form .btn {
+        grid-column: span 1;
+    }
+}
+
+/* ==========================================================================
+   14. Guild Master Command Center Styling Definitions
+   ========================================================================== */
+
+.admin-command-center {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-command-hero {
+    padding: 24px;
+}
+
+.admin-command-copy {
+    flex-grow: 1;
+}
+
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* KPI Stat Cards Grid */
+.admin-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.admin-kpi-card {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-kpi-card .metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.admin-kpi-card .metric-large {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+/* Main 2-Column Split Grid */
+.admin-main-grid {
+    display: grid;
+    grid-template-columns: 65% 35%;
+    gap: 32px;
+}
+
+.admin-left-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.admin-right-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.admin-panel-card {
+    padding: 24px;
+}
+
+.admin-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+
+/* Horizontal Scroll wrapper for Tables on Mobile */
+.admin-table-scroll {
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* Custom styles for tables */
+.recent-activity-table th, .recent-activity-table td {
+    padding: 10px 12px;
+}
+
+/* Status Badges / Indicators */
+.status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 2px solid var(--border);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+}
+
+.status-strong {
+    background-color: var(--success);
+    color: #FFFFFF;
+}
+
+.status-stable {
+    background-color: var(--primary);
+    color: var(--primary-text);
+}
+
+.status-risk {
+    background-color: var(--gold);
+    color: #1E1E1E;
+}
+
+.status-critical {
+    background-color: var(--danger);
+    color: #FFFFFF;
+}
+
+/* Quest status grid breakdown */
+.quest-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.quest-status-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-tint);
+    border: 2px solid var(--border);
+    border-radius: var(--border-radius-md);
+    padding: 10px;
+}
+
+.quest-status-box .status-count {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+/* Media Queries for Command Center Responsiveness */
+@media (max-width: 1000px) {
+    .admin-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .admin-main-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quest-status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    
+    .admin-toolbar select {
+        width: 100% !important;
+    }
+}

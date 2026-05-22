@@ -60,5 +60,23 @@ service cloud.firestore {
         
       allow update, delete: if false; // Daily Missions are immutable once finalized
     }
+
+    // publicProfiles Collection (Public Leaderboard Stats)
+    match /publicProfiles/{userId} {
+      allow read: if true;
+      allow create, update: if (isOwner(userId) || isAdmin())
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "name",
+          "level",
+          "xp",
+          "successfulDays",
+          "activeQuestCount",
+          "updatedAt"
+        ])
+        && request.resource.data.uid == userId
+        && !("email" in request.resource.data);
+      allow delete: if false;
+    }
   }
 }

@@ -12,10 +12,20 @@ import {
 } from "./firebase-config.js";
 import { currentUserProfile } from "./auth.js";
 import { calculateDifficulty, calculateQuestHealth, getLocalTodayString } from "./systems.js";
+import { syncPublicProfile } from "./leaderboard.js";
 
 // Active user session cache
 export let userQuests = [];
 export let todayMissions = {}; // Map of missionId -> missionData to check completions
+
+// React filter & pagination state
+export const trackerState = {
+    currentPage: 1,
+    limit: 5,
+    searchKeyword: "",
+    statusFilter: "all",
+    difficultyFilter: "all"
+};
 
 // 1. CREATE QUEST SUBMISSION
 export async function createQuest(title, reason, category, type, challengeDays, frequency, extraParams) {
@@ -67,6 +77,9 @@ export async function createQuest(title, reason, category, type, challengeDays, 
     };
     
     await setDocument("quests", questId, questDoc);
+    if (currentUserProfile && currentUserProfile.role === "user") {
+        await syncPublicProfile(currentUserProfile.uid);
+    }
     return true;
 }
 
@@ -123,7 +136,7 @@ export function computeQuestMetrics(quest) {
     };
 }
 
-// 4. RENDER ACTIVE AND ARCHIVED BOARDS
+// 4. RENDER ACTIVE AND ARCHIVED BOARDS WITH FILTER, SEARCH, AND PAGINATION
 export function renderQuestBoard(onQuestClicked) {
     const activeContainer = document.getElementById("activeQuestsContainer");
     const archiveContainer = document.getElementById("archiveQuestsContainer");
@@ -135,9 +148,6 @@ export function renderQuestBoard(onQuestClicked) {
     activeContainer.innerHTML = "";
     if (archiveContainer) archiveContainer.innerHTML = "";
     
-    let activeQuests = userQuests.filter(q => q.status === "Active" || q.status === "Paused");
-    let completedQuests = userQuests.filter(q => q.status === "Completed" || q.status === "Archived" || q.status === "Abandoned");
-    
     // Stats overall calculations (filter out deleted/archived and abandoned quests from the achievements statistics)
     const activeOrCompletedQuests = userQuests.filter(q => q.status !== "Archived" && q.status !== "Abandoned");
     let totalConsistentDays = activeOrCompletedQuests.reduce((sum, q) => sum + (q.successfulDays || 0), 0);
@@ -146,16 +156,56 @@ export function renderQuestBoard(onQuestClicked) {
     if (activeCountSpan) activeCountSpan.innerText = `${totalConsistentDays} Days`;
     if (bestChainSpan) bestChainSpan.innerText = `${maxBestChain} Days`;
     
-    // A. Active Board Rendering
-    if (activeQuests.length === 0) {
+    // 1. FILTER DATA
+    let filteredQuests = [...userQuests];
+    
+    // A. Filter search keyword (title or category)
+    if (trackerState.searchKeyword.trim() !== "") {
+        const kw = trackerState.searchKeyword.toLowerCase();
+        filteredQuests = filteredQuests.filter(q => 
+            (q.title && q.title.toLowerCase().includes(kw)) || 
+            (q.category && q.category.toLowerCase().includes(kw))
+        );
+    }
+    
+    // B. Filter status
+    if (trackerState.statusFilter !== "all") {
+        filteredQuests = filteredQuests.filter(q => q.status === trackerState.statusFilter);
+    } else {
+        // By default, HabitQuest dashboard only displays Active and Paused quests unless "all" status is filtered,
+        // which renders all user's historical quests.
+    }
+    
+    // C. Filter difficulty
+    if (trackerState.difficultyFilter !== "all") {
+        filteredQuests = filteredQuests.filter(q => q.difficultyLevel === trackerState.difficultyFilter);
+    }
+    
+    // 2. PAGINATION CALCULATION
+    const totalFiltered = filteredQuests.length;
+    const totalPages = Math.ceil(totalFiltered / trackerState.limit) || 1;
+    
+    // Safety bound adjustment
+    if (trackerState.currentPage > totalPages) {
+        trackerState.currentPage = totalPages;
+    }
+    if (trackerState.currentPage < 1) {
+        trackerState.currentPage = 1;
+    }
+    
+    const startIndex = (trackerState.currentPage - 1) * trackerState.limit;
+    const paginatedQuests = filteredQuests.slice(startIndex, startIndex + trackerState.limit);
+    
+    // 3. Active Board Rendering
+    if (paginatedQuests.length === 0) {
         activeContainer.innerHTML = `
             <div class="card neo-card empty-state text-center">
                 <span class="empty-emoji">📜</span>
-                <h4>Your Quest Board is empty!</h4>
-                <p>Post a Quest to begin your discipline tracking campaign.</p>
+                <h4>No Quests Found</h4>
+                <p>No active or matching quests were found for your filter criteria.</p>
             </div>`;
     } else {
-        activeQuests.forEach(quest => {
+        paginatedQuests.forEach(quest => {
             const metrics = computeQuestMetrics(quest);
             const todayStr = getLocalTodayString();
             const missionId = `${quest.questId}_${quest.userId}_${todayStr}`;
@@ -177,16 +227,20 @@ export function renderQuestBoard(onQuestClicked) {
             // Create Quest Card
             const card = document.createElement("div");
             card.className = "card neo-card quest-card";
+            if (quest.status === "Archived" || quest.status === "Abandoned" || quest.status === "Completed") {
+                card.classList.add("opacity-muted");
+            }
             
             card.innerHTML = `
                 <div class="quest-card-header">
                     <div>
                         <span class="badge badge-category">${quest.category}</span>
-                        <h4 class="quest-card-title mt-xs" data-id="${quest.questId}">${quest.title}</h4>
+                        <h4 class="quest-card-title mt-xs" data-id="${quest.questId}" style="cursor: pointer;">${quest.title}</h4>
                     </div>
                     <div class="quest-card-badges">
                         <span class="badge ${diffClass}">${quest.difficultyLevel}</span>
                         <span class="badge badge-primary">⚡ ${quest.currentChain} Chain</span>
+                        <span class="badge badge-outline" style="margin-left: 4px;">${quest.status}</span>
                     </div>
                 </div>
                 
@@ -206,9 +260,12 @@ export function renderQuestBoard(onQuestClicked) {
                     </div>
                     
                     <div>
-                        ${isCompletedToday 
-                            ? `<button class="btn btn-sm btn-outline" disabled>✓ ${missionData.clearLevel} Clear</button>` 
-                            : `<button class="btn btn-sm btn-primary font-bold btn-action-trigger" data-id="${quest.questId}">⚔️ Launch</button>`
+                        ${quest.status !== "Active" && quest.status !== "Paused"
+                            ? `<span class="badge badge-outline">${quest.status} Campaign</span>`
+                            : (isCompletedToday 
+                                ? `<button class="btn btn-sm btn-outline" disabled>✓ ${missionData.clearLevel} Clear</button>` 
+                                : `<button class="btn btn-sm btn-primary font-bold btn-action-trigger" data-id="${quest.questId}">⚔️ Launch</button>`
+                              )
                         }
                     </div>
                 </div>
@@ -223,8 +280,39 @@ export function renderQuestBoard(onQuestClicked) {
         });
     }
     
-    // B. Completed & Archived Render
+    // 4. Render Pagination Controls
+    const paginationContainer = document.getElementById("trackerPaginationContainer");
+    if (paginationContainer) {
+        paginationContainer.innerHTML = "";
+        
+        if (totalFiltered > trackerState.limit) {
+            paginationContainer.innerHTML = `
+                <button id="btnPrevPage" class="btn btn-sm btn-outline font-bold" ${trackerState.currentPage === 1 ? "disabled" : ""}>⬅ Prev</button>
+                <span class="font-bold text-sm">Page ${trackerState.currentPage} of ${totalPages} (Total: ${totalFiltered})</span>
+                <button id="btnNextPage" class="btn btn-sm btn-outline font-bold" ${trackerState.currentPage === totalPages ? "disabled" : ""}>Next ➡</button>
+            `;
+            
+            const prevBtn = paginationContainer.querySelector("#btnPrevPage");
+            const nextBtn = paginationContainer.querySelector("#btnNextPage");
+            
+            if (prevBtn && trackerState.currentPage > 1) {
+                prevBtn.addEventListener("click", () => {
+                    trackerState.currentPage--;
+                    renderQuestBoard(onQuestClicked);
+                });
+            }
+            if (nextBtn && trackerState.currentPage < totalPages) {
+                nextBtn.addEventListener("click", () => {
+                    trackerState.currentPage++;
+                    renderQuestBoard(onQuestClicked);
+                });
+            }
+        }
+    }
+    
+    // B. Completed & Archived Render (Laci Bawah Independen untuk Backup Histori Lengkap)
     if (archiveContainer) {
+        let completedQuests = userQuests.filter(q => q.status === "Completed" || q.status === "Archived" || q.status === "Abandoned");
         if (completedQuests.length === 0) {
             archiveContainer.innerHTML = `<p class="secondary-text text-center italic">No completed or archived quests found.</p>`;
         } else {
@@ -259,14 +347,23 @@ export async function pauseQuestCampaign(questId, currentPauseState) {
     const newStatus = currentPauseState === "Paused" ? "Active" : "Paused";
     await updateDocument("quests", questId, { status: newStatus });
     await loadUserQuestsAndTodayLogs();
+    if (currentUserProfile && currentUserProfile.role === "user") {
+        await syncPublicProfile(currentUserProfile.uid);
+    }
 }
 
 export async function archiveQuestCampaign(questId) {
     await updateDocument("quests", questId, { status: "Archived" });
     await loadUserQuestsAndTodayLogs();
+    if (currentUserProfile && currentUserProfile.role === "user") {
+        await syncPublicProfile(currentUserProfile.uid);
+    }
 }
 
 export async function deleteQuestCampaign(questId) {
     await updateDocument("quests", questId, { status: "Archived" }); // Safe soft-deletion rules
     await loadUserQuestsAndTodayLogs();
+    if (currentUserProfile && currentUserProfile.role === "user") {
+        await syncPublicProfile(currentUserProfile.uid);
+    }
 }

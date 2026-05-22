@@ -10,6 +10,7 @@ import {
     getDocument, 
     setDocument 
 } from "./firebase-config.js";
+import { syncPublicProfile } from "./leaderboard.js";
 import { 
     GoogleAuthProvider, 
     signInWithPopup, 
@@ -83,6 +84,11 @@ export function registerAuthStateListener(onSessionChanged) {
                         alert("Access Denied: Adventurer roles are strictly restricted to Google accounts.");
                         await logoutUser();
                         return;
+                    }
+                    
+                    // Sync public profiles on sign in/session restore
+                    if (currentUserProfile.role === "user") {
+                        syncPublicProfile(firebaseUser.uid);
                     }
                     
                     onSessionChanged(currentUserProfile);

@@ -30,7 +30,6 @@ import {
     query, 
     where, 
     getDocs, 
-    addDoc, 
     serverTimestamp, 
     increment,
     runTransaction
